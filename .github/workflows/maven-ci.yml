@@ -1,38 +1,25 @@
-name: CI - Build & Test
+name: Maven CI
 
 on:
   push:
-    branches: [ dev, master ]
+    branches: [ "dev" ]
   pull_request:
-    branches: [ master ]
+    branches: [ "dev" ]
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: 'maven'
+    - name: Set up JDK 21
+      uses: actions/setup-java@v3
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
 
-      - name: Cache Maven repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
-
-      - name: Build with Maven
-        run: mvn -B -e -DskipTests=false clean package
-
-      - name: Upload built JAR (artifact)
-        uses: actions/upload-artifact@v4
-        with:
-          name: jar
-          path: target/*jar
+    - name: Build with Maven
+      run: mvn -B package --file pom.xml
