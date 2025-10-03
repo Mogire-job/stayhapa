@@ -1,0 +1,35 @@
+services:
+  stayhapa-db:
+    image: postgres:16
+    container_name: stayhapa-db
+    environment:
+      POSTGRES_DB: stayhapa
+      POSTGRES_USER: stayhapa_user
+      POSTGRES_PASSWORD: 12345678
+    ports:
+      - "5432:5432"
+    volumes:
+      - stayhapa_pgdata:/var/lib/postgresql/data
+
+  stayhapa-backend:
+    image: stayhapa-backend
+    container_name: stayhapa-backend
+    depends_on:
+      - stayhapa-db
+    ports:
+      - "8443:8443"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: /app/stayhapa.jks
+      SERVER_SSL_KEY_STORE_PASSWORD: "12345678"
+      SERVER_SSL_KEY_STORE_TYPE: JKS
+      SERVER_SSL_KEY_ALIAS: stayhapa
+      SPRING_DATASOURCE_URL: jdbc:postgresql://stayhapa-db:5432/stayhapa
+      SPRING_DATASOURCE_USERNAME: stayhapa_user
+      SPRING_DATASOURCE_PASSWORD: 12345678
+    volumes:
+      - ./stayhapa.jks:/app/stayhapa.jks:ro
+
+volumes:
+  stayhapa_pgdata:
