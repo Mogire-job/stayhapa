@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: psql-client
+spec:
+  restartPolicy: Never
+  containers:
+    - name: psql-client
+      image: postgres:16
+      stdin: true
+      tty: true
+      env:
+        - name: PGPASSWORD
+          value: stayhapa_pass
+      volumeMounts:
+        - name: seed-volume
+          mountPath: /seed
+  volumes:
+    - name: seed-volume
+      configMap:
+        name: stayhapa-seed

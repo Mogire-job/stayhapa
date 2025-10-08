@@ -1,61 +1,59 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-
----
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: postgres
+  name: stayhapa-backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app: stayhapa-backend
   template:
     metadata:
       labels:
-        app: postgres
+        app: stayhapa-backend
     spec:
       containers:
-        - name: postgres
-          image: postgres:16
+        - name: stayhapa-backend
+          image: stayhapa-backend:latest
           ports:
-            - containerPort: 5432
+            - containerPort: 8443
           env:
-            - name: POSTGRES_DB
-              value: stayhapa_db
-            - name: POSTGRES_USER
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/stayhapa_db
+            - name: SPRING_DATASOURCE_USERNAME
               value: stayhapa_user
-            - name: POSTGRES_PASSWORD
+            - name: SPRING_DATASOURCE_PASSWORD
               value: stayhapa_pass
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
+            - name: SPRING_JPA_SHOW_SQL
+              value: "true"
+            - name: SERVER_SSL_KEY_STORE
+              value: /app/stayhapa.jks
+            - name: SERVER_SSL_KEY_STORE_PASSWORD
+              value: changeit
+            - name: SERVER_SSL_KEY_STORE_TYPE
+              value: JKS
           volumeMounts:
-            - name: postgres-storage
-              mountPath: /var/lib/postgresql/data
+            - name: keystore-volume
+              mountPath: /app/stayhapa.jks
+              subPath: stayhapa.jks
       volumes:
-        - name: postgres-storage
-          persistentVolumeClaim:
-            claimName: postgres-pvc
-
+        - name: keystore-volume
+          configMap:
+            name: stayhapa-keystore
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres
+  name: stayhapa-backend
 spec:
   selector:
-    app: postgres
+    app: stayhapa-backend
   ports:
     - protocol: TCP
-      port: 5432
-      targetPort: 5432
+      port: 8443
+      targetPort: 8443
   type: ClusterIP
