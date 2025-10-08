@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stayhapa-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stayhapa-frontend
+  template:
+    metadata:
+      labels:
+        app: stayhapa-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: stayhapa-frontend:latest
+        ports:
+        - containerPort: 8080  # or 3000 if that’s your Vue dev port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: stayhapa-frontend
+  ports:
+    - protocol: TCP
+      port: 8080       # same as containerPort
+      targetPort: 8080
+  type: NodePort

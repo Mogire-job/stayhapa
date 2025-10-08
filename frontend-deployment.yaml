@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stayhapa-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stayhapa-frontend
+  template:
+    metadata:
+      labels:
+        app: stayhapa-frontend
+    spec:
+      containers:
+        - name: stayhapa-frontend
+          image: localhost:5000/stayhapa-frontend:latest
+          imagePullPolicy: IfNotPresent   # <- Add it here
+          ports:
+            - containerPort: 3000

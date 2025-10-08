@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative w-screen h-screen bg-cover bg-center bg-no-repeat overflow-hidden"
+    class="relative w-screen min-h-screen bg-cover bg-center bg-no-repeat overflow-hidden"
     style="background-image: url('/src/assets/hero.jpeg');"
   >
     <!-- Dark Overlay -->
@@ -40,6 +40,16 @@
             @click="closeMenu"
           >Home</router-link>
           <router-link
+            to="/about"
+            class="block hover:text-blue-600 font-semibold"
+            @click="closeMenu"
+          >About</router-link>
+          <router-link
+            to="/contact"
+            class="block hover:text-blue-600 font-semibold"
+            @click="closeMenu"
+          >Contact</router-link>
+          <router-link
             to="/bookings"
             class="block hover:text-blue-600 font-semibold"
             @click="closeMenu"
@@ -65,14 +75,20 @@
 
     <!-- Hero Section Content -->
     <div
-      class="relative z-10 flex flex-col justify-center items-center text-center text-white h-full px-4"
+      class="relative z-10 flex flex-col justify-center items-center text-center text-white h-screen px-4"
     >
-      <h1 class="text-5xl md:text-6xl font-bold text-red-500 mb-6">
+      <h1 class="text-6xl md:text-7xl font-black text-red-600 mb-6 drop-shadow-lg">
         StayHapa
       </h1>
-      <p class="text-lg md:text-xl mb-10 max-w-2xl text-gray-100">
-        Discover cozy homes, apartments, and spaces designed for your comfort and convenience.
+      <p class="text-xl md:text-2xl text-white max-w-3xl leading-relaxed mb-10 drop-shadow-md">
+        Find <span class="text-red-500 font-bold">cozy homes</span>, modern apartments, and thoughtfully designed spaces tailored for your comfort and convenience.
       </p>
+      <router-link
+        to="/listings"
+        class="mt-4 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all shadow-lg"
+      >
+        Explore Listings
+      </router-link>
     </div>
   </div>
 </template>

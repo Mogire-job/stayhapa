@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stayhapa-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stayhapa-backend
+  template:
+    metadata:
+      labels:
+        app: stayhapa-backend
+    spec:
+      containers:
+        - name: stayhapa-backend
+          image: localhost:5000/stayhapa-backend:latest
+          imagePullPolicy: IfNotPresent   # <- ensures it uses local image if present
+          ports:
+            - containerPort: 5000   # <- backend port
