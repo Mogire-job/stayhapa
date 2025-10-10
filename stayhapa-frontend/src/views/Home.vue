@@ -174,7 +174,8 @@
           <div class="host-text">
             <h2>Become a Stayhapa Host</h2>
             <p>Earn extra income by sharing your space with travelers from around the world.</p>
-            <router-link to="/become-host" class="cta-button">Get Started</router-link>
+            <!-- FIXED: Changed from /become-host to /get-started?type=host -->
+            <router-link to="/get-started?type=host" class="cta-button">Get Started</router-link>
           </div>
           <div class="host-stats">
             <div class="stat-item">
@@ -189,6 +190,39 @@
         </div>
       </div>
     </section>
+
+    <!-- Footer Section -->
+    <footer class="main-footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-section">
+            <h3>Stayhapa</h3>
+            <p>Find your perfect stay experience with unique accommodations worldwide.</p>
+          </div>
+          <div class="footer-section">
+            <h4>For Travelers</h4>
+            <router-link to="/get-started" class="footer-link">Get Started</router-link>
+            <router-link to="/listings" class="footer-link">Browse Listings</router-link>
+            <router-link to="/login" class="footer-link">Traveler Login</router-link>
+          </div>
+          <div class="footer-section">
+            <h4>For Hosts</h4>
+            <router-link to="/get-started?type=host" class="footer-link">Become a Host</router-link>
+            <router-link to="/host-guide" class="footer-link">Hosting Guide</router-link>
+            <router-link to="/login" class="footer-link">Host Login</router-link>
+          </div>
+          <div class="footer-section">
+            <h4>Support</h4>
+            <router-link to="/help" class="footer-link">Help Center</router-link>
+            <router-link to="/safety" class="footer-link">Safety</router-link>
+            <router-link to="/contact" class="footer-link">Contact Us</router-link>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2024 Stayhapa. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
 
     <!-- Guests Modal -->
     <div v-if="showGuestsModal" class="modal-overlay" @click="showGuestsModal = false">
@@ -783,6 +817,56 @@ export default {
   opacity: 0.9;
 }
 
+/* Footer Styles */
+.main-footer {
+  background: #333;
+  color: white;
+  padding: 3rem 2rem 1rem;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.footer-section h3 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.footer-section h4 {
+  color: white;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.footer-section p {
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+.footer-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: color 0.3s;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.footer-link:hover {
+  color: white;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 2rem;
+  text-align: center;
+  opacity: 0.7;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -889,6 +973,12 @@ export default {
   
   .nav-link {
     font-size: 0.9rem;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    text-align: center;
   }
 }
 

@@ -10,7 +10,8 @@
         </div>
         <div class="nav-links">
           <router-link to="/listings" class="nav-link">Browse Stays</router-link>
-          <router-link to="/become-host" class="nav-link">Become a Host</router-link>
+          <!-- FIXED: Changed from /become-host to /get-started?type=host -->
+          <router-link to="/get-started?type=host" class="nav-link">Become a Host</router-link>
           <div class="user-menu">
             <img :src="user.avatar" :alt="user.name" class="user-avatar">
             <span class="user-name">{{ user.name }}</span>
@@ -412,10 +413,12 @@
             </div>
 
             <div class="host-actions">
-              <router-link to="/become-host" class="host-action-btn" v-if="!user.isHost">
+              <!-- FIXED: Changed from /become-host to /get-started?type=host -->
+              <router-link to="/get-started?type=host" class="host-action-btn" v-if="!user.isHost">
                 Become a Host
               </router-link>
-              <router-link to="/host/listings" class="host-action-btn" v-else>
+              <!-- FIXED: Changed from /host/listings to /host/properties -->
+              <router-link to="/host/properties" class="host-action-btn" v-else>
                 Manage Listings
               </router-link>
               <button class="host-action-btn" @click="viewHostCalendar">
@@ -671,6 +674,16 @@ export default {
     },
     viewEarnings() {
       this.$router.push('/host/earnings');
+    }
+  },
+  mounted() {
+    // Load actual user data from localStorage
+    const userData = localStorage.getItem('stayhapa_current_user');
+    if (userData) {
+      const currentUser = JSON.parse(userData);
+      this.user.name = currentUser.fullName;
+      this.user.email = currentUser.email;
+      this.user.isHost = currentUser.userType === 'host';
     }
   }
 }
