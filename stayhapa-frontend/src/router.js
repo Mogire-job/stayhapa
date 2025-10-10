@@ -13,6 +13,10 @@ import HostDashboard from './views/HostDashboard.vue'
 import AddProperty from './views/layouts/AddProperty.vue'
 import GuestDashboard from './views/GuestDashboard.vue'
 import EmailVerification from './components/Auth/EmailVerification.vue'
+import HostGuide from './views/HostGuide.vue'
+import HelpCenter from './views/HelpCenter.vue'
+import Safety from './views/Safety.vue'
+import ContactUs from './views/ContactUs.vue'
 
 // ListingsManagement is in components/Host/ so we need to import it differently
 const ListingsManagement = () => import('./components/Host/ListingsManagement.vue')
@@ -31,6 +35,10 @@ const routes = [
   { path: '/host/properties', component: ListingsManagement },
   { path: '/guest/dashboard', component: GuestDashboard },
   { path: '/verify-account', component: EmailVerification },
+  { path: '/host-guide', component: HostGuide },
+  { path: '/help', component: HelpCenter },
+  { path: '/safety', component: Safety },
+  { path: '/contact', component: ContactUs },
 ]
 
 const router = createRouter({
