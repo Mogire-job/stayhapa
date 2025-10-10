@@ -1,41 +1,25 @@
-# Maven / Java
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Ignore environment and sensitive files
+.env
+*.key
+*.pem
 
-# STS (Spring Tool Suite)
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Ignore local database or backups
+*.tar
+*.zip
+*.bak
+*.sql
 
-# IntelliJ IDEA
-.idea
-*.iws
-*.iml
-*.ipr
-
-# NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-# VS Code
-.vscode/
-
-# Node.js / Frontend
+# Node and build files
 node_modules/
 dist/
-.vite/
-npm-debug.log
-yarn-error.log
-package-lock.json
+build/
+.next/
+.cache/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE and temp files
+.vscode/
+*.log
