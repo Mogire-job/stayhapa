@@ -9,8 +9,10 @@ import Account from './views/Account.vue'
 import Login from './views/Login.vue'
 import SignUp from './views/SignUp.vue'
 import GetStartedPage from './views/layouts/GetStartedPage.vue'
-import HostDashboard from './views/HostDashboard.vue'  // This is in views/ not layouts/
+import HostDashboard from './views/HostDashboard.vue'
 import AddProperty from './views/layouts/AddProperty.vue'
+import GuestDashboard from './views/GuestDashboard.vue'
+import EmailVerification from './components/Auth/EmailVerification.vue'
 
 // ListingsManagement is in components/Host/ so we need to import it differently
 const ListingsManagement = () => import('./components/Host/ListingsManagement.vue')
@@ -27,11 +29,41 @@ const routes = [
   { path: '/host/dashboard', component: HostDashboard },
   { path: '/host/add-property', component: AddProperty },
   { path: '/host/properties', component: ListingsManagement },
+  { path: '/guest/dashboard', component: GuestDashboard },
+  { path: '/verify-account', component: EmailVerification },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+// Add navigation guard to check authentication and verification
+router.beforeEach((to, from, next) => {
+  const currentUser = JSON.parse(localStorage.getItem('stayhapa_current_user') || 'null');
+  
+  // Routes that require authentication
+  const requiresAuth = [
+    '/dashboard', '/account', '/bookings', 
+    '/host/dashboard', '/host/add-property', '/host/properties',
+    '/guest/dashboard'
+  ];
+  
+  // Check if route requires authentication
+  if (requiresAuth.includes(to.path) && !currentUser) {
+    next('/login');
+    return;
+  }
+  
+  // Check verification status for authenticated routes (excluding verification page itself)
+  if (currentUser && to.path !== '/verify-account' && requiresAuth.includes(to.path)) {
+    if (!currentUser.isVerified) {
+      next('/verify-account');
+      return;
+    }
+  }
+  
+  next();
 })
 
 export default router

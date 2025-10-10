@@ -1,5 +1,5 @@
 export const googleMapsConfig = {
-  apiKey: process.env.VUE_APP_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
+      apiKey: 'AIzaSyCA6A-dFKOn3hAG9fiqboTW6ABMJooINOg',
   libraries: ['places'],
   language: 'en',
   region: 'US'

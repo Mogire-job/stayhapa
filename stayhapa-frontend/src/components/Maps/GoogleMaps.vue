@@ -42,6 +42,11 @@ export default {
   methods: {
     async initializeMap() {
       try {
+        // Check if API key is available
+        if (!googleMapsConfig.apiKey || googleMapsConfig.apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
+          throw new Error('Google Maps API key is missing. Please check your environment variables.');
+        }
+
         this.loader = new Loader({
           apiKey: googleMapsConfig.apiKey,
           version: 'weekly',

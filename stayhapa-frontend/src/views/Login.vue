@@ -78,19 +78,29 @@ export default {
         const user = users.find(u => u.email === this.loginData.email && u.password === this.loginData.password);
 
         if (user) {
-          // Save current user session
+          // Save current user session with all user data
           localStorage.setItem('stayhapa_current_user', JSON.stringify({
             id: user.id,
             fullName: user.fullName,
             email: user.email,
-            userType: user.userType
+            phone: user.phone,
+            userType: user.userType,
+            emailVerified: user.emailVerified || false,
+            phoneVerified: user.phoneVerified || false,
+            isVerified: user.isVerified || false,
+            createdAt: user.createdAt
           }));
 
-          // Redirect based on user type
-          if (user.userType === 'host') {
-            this.$router.push('/host/dashboard');
+          // Check verification status and redirect accordingly
+          if (!user.isVerified) {
+            this.$router.push('/verify-account');
           } else {
-            this.$router.push('/dashboard');
+            // Redirect based on user type
+            if (user.userType === 'host') {
+              this.$router.push('/host/dashboard');
+            } else {
+              this.$router.push('/guest/dashboard');
+            }
           }
         } else {
           alert('Invalid email or password');
