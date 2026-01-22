@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_Mogire_job_stayhapa_1769071651356-pr-trigger-input-set
+  identifier: Build_Mogire_job_stayhapa_1769071651356prtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: default_project
+  pipeline:
+    identifier: Build_Mogire_job_stayhapa_1769071651356
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
