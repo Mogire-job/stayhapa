@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_Mogire_job_stayhapa_1769071725485-push-trigger-input-set
+  identifier: Build_Mogire_job_stayhapa_1769071725485pushtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: default_project
+  pipeline:
+    identifier: Build_Mogire_job_stayhapa_1769071725485
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
