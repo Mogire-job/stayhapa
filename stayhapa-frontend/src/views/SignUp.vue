@@ -267,6 +267,7 @@ export default {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   max-width: 500px;
   width: 100%;
+  overflow: hidden;
 }
 
 .user-type-header {
@@ -308,6 +309,8 @@ export default {
 .form-group {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
 }
 
 .form-group label {
@@ -322,6 +325,9 @@ export default {
   border-radius: 8px;
   font-size: 1rem;
   transition: border-color 0.3s;
+  width: 100%;
+  box-sizing: border-box;
+  height: 48px;
 }
 
 .form-group input:focus {
