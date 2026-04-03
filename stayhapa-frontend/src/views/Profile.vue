@@ -534,35 +534,24 @@ const goToDashboard = () => {
 <style scoped>
 .profile-page {
   min-height: 100vh;
-  background: #f1f5f9;
-  position: relative;
+  background: #f8f9fa;
 }
 
 .profile-header-bg {
-  height: 200px;
-  background: linear-gradient(135deg, #0F4C81 0%, #1a6fa3 50%, #0F4C81 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-.header-pattern {
-  position: absolute;
-  inset: 0;
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+  height: 180px;
+  background: linear-gradient(135deg, #FF385C 0%, #e0314c 100%);
 }
 
 .profile-container {
-  max-width: 900px;
-  margin: -100px auto 0;
+  max-width: 800px;
+  margin: -80px auto 0;
   padding: 0 1.5rem 3rem;
 }
 
 .profile-card {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 
@@ -571,7 +560,6 @@ const goToDashboard = () => {
   flex-direction: column;
   gap: 1.5rem;
   padding: 2rem;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .back-btn-wrapper {
@@ -610,11 +598,11 @@ const goToDashboard = () => {
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
+  width: 90px;
+  height: 90px;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid white;
+  border: 3px solid white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -622,11 +610,11 @@ const goToDashboard = () => {
   position: absolute;
   bottom: 0;
   right: 0;
-  background: #0F4C81;
+  background: #FF385C;
   color: white;
   border: none;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -636,6 +624,9 @@ const goToDashboard = () => {
 }
 
 .avatar-edit-btn:hover {
+  background: #e0314c;
+  transform: scale(1.1);
+}
   background: #0a3a6b;
   transform: scale(1.1);
 }
@@ -691,22 +682,22 @@ const goToDashboard = () => {
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   border: none;
 }
 
 .btn-primary {
-  background: #0F4C81;
+  background: #FF385C;
   color: white;
 }
 
 .btn-primary:hover {
-  background: #0a3a6b;
+  background: #e0314c;
 }
 
 .btn-outline {
   background: white;
-  border: 1px solid #d1d5db;
+  border: 1px solid #ddd;
   color: #374151;
 }
 
@@ -733,29 +724,34 @@ const goToDashboard = () => {
   display: flex;
   border-bottom: 1px solid #e5e7eb;
   padding: 0 2rem;
-  background: #fafafa;
+  background: white;
+  gap: 0.5rem;
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1rem;
   background: none;
   border: none;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #6b7280;
+  color: #717171;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
 
 .tab-btn:hover {
-  color: #0F4C81;
+  color: #222;
 }
 
 .tab-btn.active {
+  color: #222;
+  border-bottom-color: #222;
+  font-weight: 600;
+}
   color: #0F4C81;
   border-bottom-color: #0F4C81;
 }
