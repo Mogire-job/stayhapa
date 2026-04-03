@@ -19,75 +19,29 @@
       </nav>
 
       <!-- Hero Content -->
+      <div class="hero-slideshow">
+        <div 
+          v-for="(img, index) in heroImages" 
+          :key="index"
+          class="hero-slide"
+          :class="{ active: currentSlide === index }"
+          :style="{ backgroundImage: `url(${img})` }"
+        ></div>
+        <div class="hero-overlay"></div>
+      </div>
+      
       <div class="hero-content">
+        <!-- Animated Logo -->
+        <div class="hero-logo">
+          <span class="logo-text">Stay</span><span class="logo-accent">hapa</span>
+        </div>
+        
         <div class="hero-text">
           <h1 class="hero-title">Find Your Perfect Stay Experience</h1>
           <p class="hero-subtitle">Discover unique accommodations and create unforgettable memories</p>
-        </div>
-
-        <!-- Search Widget -->
-        <div class="search-widget">
-          <div class="search-tabs">
-            <button 
-              class="search-tab active" 
-              @click="setActiveTab('stays')"
-            >
-              Stays
-            </button>
-            <button 
-              class="search-tab" 
-              @click="setActiveTab('experiences')"
-            >
-              Experiences
-            </button>
-          </div>
-
-          <div class="search-form">
-            <div class="search-field">
-              <label>Where</label>
-              <input 
-                type="text" 
-                placeholder="Search destinations" 
-                v-model="searchLocation"
-                @focus="showLocationSuggestions = true"
-              >
-              <div v-if="showLocationSuggestions" class="suggestions-dropdown">
-                <div class="suggestion-item">Nairobi, Kenya</div>
-                <div class="suggestion-item">Mombasa, Kenya</div>
-                <div class="suggestion-item">Zanzibar, Tanzania</div>
-                <div class="suggestion-item">Cape Town, South Africa</div>
-              </div>
-            </div>
-
-            <div class="search-field">
-              <label>Check in</label>
-              <input 
-                type="date" 
-                v-model="checkInDate"
-              >
-            </div>
-
-            <div class="search-field">
-              <label>Check out</label>
-              <input 
-                type="date" 
-                v-model="checkOutDate"
-              >
-            </div>
-
-            <div class="search-field">
-              <label>Guests</label>
-              <div class="guests-selector" @click="showGuestsModal = true">
-                {{ guestsCount }} guest{{ guestsCount !== 1 ? 's' : '' }}
-              </div>
-            </div>
-
-            <button class="search-btn" @click="handleSearch">
-              <span>Search</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M21 21L16.514 16.506L21 21ZM19 10.5C19 15.194 15.194 19 10.5 19C5.806 19 2 15.194 2 10.5C2 5.806 5.806 2 10.5 2C15.194 2 19 5.806 19 10.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
+          <div class="hero-buttons">
+            <router-link to="/signup" class="btn-primary">Get Started</router-link>
+            <router-link to="/login" class="btn-secondary">Log In</router-link>
           </div>
         </div>
       </div>
@@ -105,6 +59,45 @@
         <div class="trust-item">
           <div class="trust-number">24/7</div>
           <div class="trust-label">Support</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works">
+      <div class="container">
+        <h2 class="section-title">How Stayhapa Works</h2>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <h3>Create Account</h3>
+            <p>Sign up as a guest to book stays or as a host to list your property</p>
+          </div>
+          <div class="step-card">
+            <div class="step-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="M21 21l-4.35-4.35"></path>
+              </svg>
+            </div>
+            <h3>Explore & Book</h3>
+            <p>Browse unique properties across Kenya and book your perfect stay</p>
+          </div>
+          <div class="step-card">
+            <div class="step-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+            </div>
+            <h3>Enjoy Your Stay</h3>
+            <p>Check in and enjoy a memorable experience at your destination</p>
+          </div>
         </div>
       </div>
     </section>
@@ -158,7 +151,7 @@
                 <span class="rating-number">{{ listing.rating }}</span>
               </div>
               <div class="listing-price">
-                <span class="price">${{ listing.price }}</span>
+                <span class="price">KSh {{ (listing.price * 150).toLocaleString() }}</span>
                 <span class="period">night</span>
               </div>
             </div>
@@ -179,7 +172,7 @@
           </div>
           <div class="host-stats">
             <div class="stat-item">
-              <div class="stat-number">$2,500</div>
+              <div class="stat-number">KSh 360,000</div>
               <div class="stat-label">Average annual earnings</div>
             </div>
             <div class="stat-item">
@@ -223,34 +216,6 @@
         </div>
       </div>
     </footer>
-
-    <!-- Guests Modal -->
-    <div v-if="showGuestsModal" class="modal-overlay" @click="showGuestsModal = false">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>Guests</h3>
-          <button class="close-btn" @click="showGuestsModal = false">×</button>
-        </div>
-        <div class="guests-controls">
-          <div class="guest-control">
-            <span>Adults</span>
-            <div class="counter">
-              <button @click="decrementAdults">−</button>
-              <span>{{ adultsCount }}</span>
-              <button @click="incrementAdults">+</button>
-            </div>
-          </div>
-          <div class="guest-control">
-            <span>Children</span>
-            <div class="counter">
-              <button @click="decrementChildren">−</button>
-              <span>{{ childrenCount }}</span>
-              <button @click="incrementChildren">+</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -259,14 +224,8 @@ export default {
   name: 'HomePage',
   data() {
     return {
-      activeTab: 'stays',
-      searchLocation: '',
-      checkInDate: '',
-      checkOutDate: '',
-      showLocationSuggestions: false,
-      showGuestsModal: false,
-      adultsCount: 1,
-      childrenCount: 0,
+      currentSlide: 0,
+      slideInterval: null,
       propertyCategories: [
         { id: 1, name: 'Apartments', type: 'apartment', emoji: '🏢' },
         { id: 2, name: 'Villas', type: 'villa', emoji: '🏡' },
@@ -312,48 +271,31 @@ export default {
     }
   },
   computed: {
-    guestsCount() {
-      return this.adultsCount + this.childrenCount;
+    heroImages() {
+      return [
+        'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?ixlib=rb-4.0.3&auto=format&fit=crop&w=2832&q=80',
+        'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600',
+        'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1600',
+        'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=1600'
+      ];
+    }
+  },
+  mounted() {
+    this.slideInterval = setInterval(() => {
+      this.currentSlide = (this.currentSlide + 1) % this.heroImages.length;
+    }, 5000);
+  },
+  beforeDestroy() {
+    if (this.slideInterval) {
+      clearInterval(this.slideInterval);
     }
   },
   methods: {
-    setActiveTab(tab) {
-      this.activeTab = tab;
-    },
-    handleSearch() {
-      const searchParams = {
-        location: this.searchLocation,
-        checkIn: this.checkInDate,
-        checkOut: this.checkOutDate,
-        guests: this.guestsCount
-      };
-      console.log('Search initiated:', searchParams);
-      this.$router.push({
-        path: '/listings',
-        query: searchParams
-      });
-    },
     filterByCategory(category) {
       this.$router.push({
         path: '/listings',
         query: { category }
       });
-    },
-    incrementAdults() {
-      this.adultsCount++;
-    },
-    decrementAdults() {
-      if (this.adultsCount > 1) {
-        this.adultsCount--;
-      }
-    },
-    incrementChildren() {
-      this.childrenCount++;
-    },
-    decrementChildren() {
-      if (this.childrenCount > 0) {
-        this.childrenCount--;
-      }
     }
   }
 }
@@ -364,20 +306,53 @@ export default {
   min-height: 100vh;
 }
 
-/* Hero Section */
+/* Hero Section with Slideshow */
 .hero-section {
-  min-height: 100vh;
-  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), 
-              url('@/assets/hero.jpeg') center/cover no-repeat;
+  position: relative;
+  min-height: 85vh;
   display: flex;
   flex-direction: column;
-  color: white;
-  position: relative;
+}
+
+.hero-slideshow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.hero-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.hero-slide.active {
+  opacity: 1;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.5));
 }
 
 /* Navigation */
 .navbar {
   padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .nav-container {
@@ -410,11 +385,23 @@ export default {
   color: white;
   text-decoration: none;
   font-weight: 500;
-  transition: opacity 0.3s;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
 .nav-link:hover {
-  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.signup-btn {
+  background: white;
+  color: #222 !important;
+  font-weight: 600;
+}
+
+.signup-btn:hover {
+  background: #f0f0f0 !important;
 }
 
 .signup-btn {
@@ -436,6 +423,8 @@ export default {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
+  z-index: 2;
 }
 
 .hero-title {
@@ -443,80 +432,166 @@ export default {
   font-weight: bold;
   margin-bottom: 1rem;
   line-height: 1.2;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-logo {
+  font-size: 4rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  animation: fadeInDown 1s ease-out;
+}
+
+.hero-logo .logo-text {
+  color: white;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.hero-logo .logo-accent {
+  background: linear-gradient(135deg, #FF385C 0%, #FF6B6B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hero-subtitle {
   font-size: 1.3rem;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
   opacity: 0.9;
+  color: white;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0F4C81 0%, #1a6fa8 100%);
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(15, 76, 129, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 76, 129, 0.5);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 /* Search Widget */
 .search-widget {
   background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 32px;
+  padding: 0.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   width: 100%;
-  max-width: 800px;
+  max-width: 850px;
   overflow: hidden;
-}
-
-.search-tabs {
   display: flex;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  align-items: center;
 }
 
-.search-tab {
-  padding: 0.75rem 1.5rem;
-  background: none;
-  border: none;
-  font-size: 1rem;
-  color: #666;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-}
-
-.search-tab.active {
-  color: #0F4C81;
-  border-bottom-color: #0F4C81;
-  font-weight: 600;
-}
-
-.search-form {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr auto;
-  gap: 1rem;
-  align-items: end;
-}
-
-.search-field {
+.search-widget .search-form {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex: 1;
+}
+
+.search-widget .search-field {
+  flex: 1;
+  padding: 0.75rem 1.25rem;
+  border-right: 1px solid #e0e0e0;
   position: relative;
 }
 
-.search-field label {
-  font-size: 0.8rem;
+.search-widget .search-field:last-of-type {
+  border-right: none;
+}
+
+.search-widget .search-field label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.search-widget .search-field input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 0.9rem;
+  padding: 0;
   color: #666;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
 }
 
-.search-field input,
-.guests-selector {
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  background: white;
+.search-widget .search-field input::placeholder {
+  color: #999;
+}
+
+.search-widget .guests-selector {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  color: #666;
+  border-right: 1px solid #e0e0e0;
+}
+
+.search-widget .search-btn {
+  background: #FF385C;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  padding: 0.875rem 1.5rem;
   cursor: pointer;
-}
-
-.guests-selector {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.search-widget .search-btn:hover {
+  background: #e0314c;
+  transform: scale(1.02);
 }
 
 .suggestions-dropdown {
@@ -587,6 +662,62 @@ export default {
 .trust-label {
   font-size: 0.9rem;
   opacity: 0.9;
+}
+
+/* How It Works */
+.how-it-works {
+  padding: 5rem 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.how-it-works .section-title {
+  margin-bottom: 3rem;
+}
+
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.step-card {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s;
+}
+
+.step-card:hover {
+  transform: translateY(-8px);
+}
+
+.step-icon {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0F4C81 0%, #1a6fa8 100%);
+  border-radius: 50%;
+  color: white;
+}
+
+.step-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 0.75rem;
+}
+
+.step-card p {
+  color: #6b7280;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 /* Categories Section */
@@ -945,8 +1076,23 @@ export default {
     font-size: 2.5rem;
   }
   
+  .hero-logo {
+    font-size: 2.5rem;
+  }
+  
   .hero-subtitle {
     font-size: 1.1rem;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.875rem 2rem;
+    font-size: 0.95rem;
   }
   
   .search-form {
@@ -960,6 +1106,10 @@ export default {
   
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .steps-grid {
+    grid-template-columns: 1fr;
   }
   
   .host-cta-content {

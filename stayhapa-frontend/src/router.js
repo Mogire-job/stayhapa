@@ -17,6 +17,10 @@ import HostGuide from './views/HostGuide.vue'
 import HelpCenter from './views/HelpCenter.vue'
 import Safety from './views/Safety.vue'
 import ContactUs from './views/ContactUs.vue'
+import GuestProfile from './views/GuestProfile.vue'
+import HostProfile from './views/HostProfile.vue'
+import ForgotPassword from './views/ForgotPassword.vue'
+import ResetPassword from './views/ResetPassword.vue'
 
 // ListingsManagement is in components/Host/ so we need to import it differently
 const ListingsManagement = () => import('./components/Host/ListingsManagement.vue')
@@ -33,12 +37,16 @@ const routes = [
   { path: '/host/dashboard', component: HostDashboard },
   { path: '/host/add-property', component: AddProperty },
   { path: '/host/properties', component: ListingsManagement },
+  { path: '/host/profile', component: HostProfile },
   { path: '/guest/dashboard', component: GuestDashboard },
+  { path: '/guest/profile', component: GuestProfile },
   { path: '/verify-account', component: EmailVerification },
   { path: '/host-guide', component: HostGuide },
   { path: '/help', component: HelpCenter },
   { path: '/safety', component: Safety },
   { path: '/contact', component: ContactUs },
+  { path: '/forgot-password', component: ForgotPassword },
+  { path: '/reset-password', component: ResetPassword },
 ]
 
 const router = createRouter({
