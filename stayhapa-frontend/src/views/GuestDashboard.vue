@@ -34,11 +34,11 @@
               Settings
             </router-link>
             <div class="dropdown-divider"></div>
-            <button @click="switchToHost" class="dropdown-item">
+            <button @click="createHostAccount" class="dropdown-item">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               </svg>
-              Switch to Hosting
+              Create Host Account
             </button>
             <button @click="handleLogout" class="dropdown-item logout">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -105,7 +105,7 @@
       <!-- Featured Section -->
       <section class="featured-section">
         <div class="section-header">
-          <h2>Popular homes in Mombasa</h2>
+          <h2>          Explore available stays</h2>
           <a href="#" class="see-all">See all ></a>
         </div>
         
@@ -131,11 +131,11 @@
             <div class="property-details">
               <h3 class="property-title">{{ property.title }}</h3>
               <p class="property-location">{{ property.city }}, {{ property.country }}</p>
-              <p class="property-price">KSh {{ calculateTotalPrice(property.price) }} for 2 nights • ★ {{ property.rating }}</p>
+              <p class="property-price">KSh {{ calculateTotalPrice(property.pricePerNight) }} for 2 nights • {{ property.rating ? `★ ${property.rating}` : 'New listing' }}</p>
               
               <div class="property-features">
-                <span>{{ property.bedrooms }} bedroom{{ property.bedrooms !== 1 ? 's' : '' }}</span>
-                <span>{{ property.bathrooms }} bathroom{{ property.bathrooms !== 1 ? 's' : '' }}</span>
+                <span>{{ property.bedrooms ?? 0 }} bedroom{{ property.bedrooms !== 1 ? 's' : '' }}</span>
+                <span>{{ property.bathrooms ?? 0 }} bathroom{{ property.bathrooms !== 1 ? 's' : '' }}</span>
               </div>
             </div>
           </div>
@@ -145,6 +145,9 @@
       <!-- All Listings Section -->
       <section class="all-listings">
         <h2>All Available Stays</h2>
+        <p v-if="propertiesLoading" role="status">Loading available stays…</p>
+        <p v-else-if="propertiesError" class="dashboard-error" role="alert">{{ propertiesError }}</p>
+        <p v-else-if="filteredProperties.length === 0">No stays match your search yet.</p>
         <div class="listings-grid">
           <div 
             v-for="property in filteredProperties" 
@@ -164,7 +167,7 @@
             <div class="listing-details">
               <h4>{{ property.title }}</h4>
               <p class="listing-type">{{ property.type }} in {{ property.city }}</p>
-              <p class="listing-price">KSh {{ calculateTotalPrice(property.price) }} for 2 nights • ★ {{ property.rating }}</p>
+              <p class="listing-price">KSh {{ calculateTotalPrice(property.pricePerNight) }} for 2 nights • {{ property.rating ? `★ ${property.rating}` : 'New listing' }}</p>
             </div>
           </div>
         </div>
@@ -174,6 +177,8 @@
 </template>
 
 <script>
+import propertyService from '@/services/propertyService';
+
 export default {
   name: 'GuestDashboard',
   data() {
@@ -182,6 +187,8 @@ export default {
       showUserMenu: false,
       allProperties: [],
       filteredProperties: [],
+      propertiesLoading: true,
+      propertiesError: '',
       filters: {
         location: '',
         checkIn: '',
@@ -217,11 +224,21 @@ export default {
         this.$router.push('/login');
       }
     },
-    loadProperties() {
-      const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-      // Filter only active properties
-      this.allProperties = properties.filter(prop => prop.status === 'active');
-      this.filteredProperties = [...this.allProperties];
+    async loadProperties() {
+      this.propertiesLoading = true;
+      this.propertiesError = '';
+      try {
+        const properties = await propertyService.getAllProperties();
+        this.allProperties = properties.filter(property => property.active);
+        this.filteredProperties = [...this.allProperties];
+      } catch (error) {
+        console.error('Error loading available properties:', error);
+        this.allProperties = [];
+        this.filteredProperties = [];
+        this.propertiesError = error.message || 'Could not load available stays.';
+      } finally {
+        this.propertiesLoading = false;
+      }
     },
     searchProperties() {
       let filtered = [...this.allProperties];
@@ -229,47 +246,34 @@ export default {
       // Filter by location
       if (this.filters.location) {
         filtered = filtered.filter(property => 
-          property.city.toLowerCase().includes(this.filters.location.toLowerCase()) ||
-          property.country.toLowerCase().includes(this.filters.location.toLowerCase()) ||
-          property.address.toLowerCase().includes(this.filters.location.toLowerCase())
+          (property.city || '').toLowerCase().includes(this.filters.location.toLowerCase()) ||
+          (property.country || '').toLowerCase().includes(this.filters.location.toLowerCase())
         );
       }
       
       // Filter by guests
       if (this.filters.guests) {
-        filtered = filtered.filter(property => 
-          property.maxGuests >= parseInt(this.filters.guests)
+        filtered = filtered.filter(property =>
+          (property.maxGuests || 0) >= parseInt(this.filters.guests, 10)
         );
       }
       
       this.filteredProperties = filtered;
     },
     calculateTotalPrice(pricePerNight) {
-      return (pricePerNight * 2).toLocaleString();
+      return (Number(pricePerNight || 0) * 2).toLocaleString();
     },
     viewProperty(property) {
       this.$router.push(`/property/${property.id}`);
     },
-    switchToHost() {
-      // Update user's current mode to host
-      const userData = localStorage.getItem('stayhapa_current_user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        user.currentMode = 'host';
-        localStorage.setItem('stayhapa_current_user', JSON.stringify(user));
-        
-        // Also update in users array for persistence
-        const users = JSON.parse(localStorage.getItem('stayhapa_users') || '[]');
-        const userIndex = users.findIndex(u => u.id === user.id);
-        if (userIndex !== -1) {
-          users[userIndex].currentMode = 'host';
-          localStorage.setItem('stayhapa_users', JSON.stringify(users));
-        }
-      }
-      this.$router.push('/host/dashboard');
+    createHostAccount() {
+      localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
+      this.$router.push({ path: '/signup', query: { userType: 'host' } });
     },
     handleLogout() {
       localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
       this.$router.push('/');
     }
   }

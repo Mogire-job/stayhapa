@@ -20,7 +20,7 @@
           <router-link to="/host/dashboard" class="menu-item active">Dashboard</router-link>
           <router-link to="/host/add-property" class="menu-item">Add Property</router-link>
           <router-link to="/host/properties" class="menu-item">My Properties</router-link>
-          <router-link to="/host/bookings" class="menu-item">Bookings</router-link>
+          <router-link to="/bookings" class="menu-item">Bookings</router-link>
           <router-link to="/host/earnings" class="menu-item">Earnings</router-link>
         </div>
       </div>
@@ -75,7 +75,7 @@
               <h3>Manage Properties</h3>
               <p>View and edit your existing properties</p>
             </router-link>
-            <router-link to="/host/bookings" class="action-card">
+            <router-link to="/bookings" class="action-card">
               <div class="action-icon">📅</div>
               <h3>View Bookings</h3>
               <p>Check upcoming and past bookings</p>

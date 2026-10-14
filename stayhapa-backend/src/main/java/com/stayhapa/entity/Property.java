@@ -57,7 +57,7 @@ public class Property {
 
     @ElementCollection
     @CollectionTable(name = "property_images", joinColumns = @JoinColumn(name = "property_id"))
-    @Column(name = "image_url")
+    @Column(name = "image_url", length = 10_000_000)
     private java.util.List<String> images;
 
     private LocalDateTime createdAt;

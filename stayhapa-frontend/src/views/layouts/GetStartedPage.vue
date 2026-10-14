@@ -270,7 +270,7 @@ export default {
     }
   },
   mounted() {
-    // Check if user type is passed in query params
+    window.scrollTo({ top: 0, behavior: 'instant' });
     const type = this.$route.query.type;
     if (type && ['guest', 'host'].includes(type)) {
       this.selectedUserType = type;

@@ -40,6 +40,7 @@ public class AuthService {
         response.setToken(token);
         response.setUserId(user.getId());
         response.setEmail(user.getEmail());
+        response.setFullName(user.getFullName());
         response.setRole(user.getRole());
         
         return response;
@@ -59,6 +60,7 @@ public class AuthService {
         response.setToken(token);
         response.setUserId(user.getId());
         response.setEmail(user.getEmail());
+        response.setFullName(user.getFullName());
         response.setRole(user.getRole());
         
         return response;

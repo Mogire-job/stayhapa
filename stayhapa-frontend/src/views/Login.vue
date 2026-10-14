@@ -54,10 +54,11 @@
         </div>
 
         <!-- User Type Toggle -->
-        <div class="user-type-toggle">
+        <div class="user-type-toggle" :class="userType" role="group" aria-label="Choose your account type">
           <button 
             type="button"
             :class="{ active: userType === 'guest' }" 
+            :aria-pressed="userType === 'guest'"
             @click="userType = 'guest'"
           >
             I'm a Guest
@@ -65,6 +66,7 @@
           <button 
             type="button"
             :class="{ active: userType === 'host' }" 
+            :aria-pressed="userType === 'host'"
             @click="userType = 'host'"
           >
             I'm a Host
@@ -123,6 +125,8 @@
             <router-link to="/forgot-password" class="forgot-link">Forgot password?</router-link>
           </div>
 
+          <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
+
           <button type="submit" class="submit-btn" :class="userType" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
             {{ loading ? 'Logging in...' : 'Log In' }}
@@ -138,11 +142,14 @@
 </template>
 
 <script>
+import { apiRequest } from '../api.js'
+
 export default {
   name: 'Login',
   data() {
     return {
       loading: false,
+      errorMessage: '',
       userType: 'guest',
       rememberMe: false,
       currentSlide: 0,
@@ -160,38 +167,43 @@ export default {
   },
   methods: {
     async handleLogin() {
+      this.errorMessage = '';
       this.loading = true;
       try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const users = JSON.parse(localStorage.getItem('stayhapa_users') || '[]');
-        const user = users.find(u => 
-          u.email === this.loginData.email && 
-          u.password === this.loginData.password &&
-          u.userType === this.userType
-        );
+        const result = await apiRequest('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: this.loginData.email.trim().toLowerCase(),
+            password: this.loginData.password
+          })
+        });
 
-        if (user) {
-          localStorage.setItem('stayhapa_current_user', JSON.stringify({
-            id: user.id,
-            fullName: user.fullName,
-            email: user.email,
-            userType: user.userType,
-            isVerified: true,
-            createdAt: user.createdAt
-          }));
-
-          if (user.userType === 'host') {
-            this.$router.push('/host/dashboard');
-          } else {
-            this.$router.push('/guest/dashboard');
-          }
-        } else {
-          alert('Invalid email or password. Please try again.');
+        const accountType = result.role.toLowerCase();
+        if (accountType !== this.userType) {
+          this.errorMessage = `This account is registered as a ${accountType}. Select the ${accountType} option to continue.`;
+          return;
         }
+
+        localStorage.setItem('stayhapa_token', result.token);
+        localStorage.setItem('stayhapa_current_user', JSON.stringify({
+          id: result.userId,
+          fullName: result.fullName,
+          email: result.email,
+          userType: accountType,
+          isVerified: true
+        }));
+        const fallback = accountType === 'host' ? '/host/dashboard' : '/guest/dashboard';
+        const redirect = this.$route.query.redirect;
+        const destination = typeof redirect === 'string'
+          && redirect.startsWith('/')
+          && !redirect.startsWith('//')
+          && !redirect.includes('\\')
+          ? redirect
+          : fallback;
+        await this.$router.push(destination);
       } catch (error) {
         console.error('Login error:', error);
-        alert('Login failed. Please try again.');
+        this.errorMessage = error.message || 'Login failed. Check your email and password and try again.';
       } finally {
         this.loading = false;
       }
@@ -207,7 +219,7 @@ export default {
       this.currentSlide = (this.currentSlide + 1) % this.heroImages.length;
     }, 5000);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.slideInterval) {
       clearInterval(this.slideInterval);
     }
@@ -312,7 +324,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(15, 76, 129, 0.85) 0%, rgba(45, 55, 72, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(17, 67, 57, 0.82) 0%, rgba(30, 38, 34, 0.9) 100%);
 }
 
 .visual-content {
@@ -369,7 +381,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafbfc;
+  background: #f8f6f0;
   padding: 2rem;
   min-height: 100vh;
 }
@@ -377,6 +389,30 @@ export default {
 .form-container {
   width: 100%;
   max-width: 380px;
+  animation: form-arrive 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.form-error {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  color: #8f3025;
+  background: #fff0eb;
+  border: 1px solid #f3c7ba;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  animation: form-arrive 220ms ease-out both;
+}
+
+@keyframes form-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-container,
+  .form-error {
+    animation: none;
+  }
 }
 
 .form-header {
@@ -386,7 +422,7 @@ export default {
 .form-header h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #183a32;
   margin-bottom: 0.35rem;
 }
 
@@ -418,9 +454,16 @@ export default {
 
 .user-type-toggle button.active {
   background: white;
-  color: #0F4C81;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(26, 55, 45, 0.12);
+}
+
+.user-type-toggle.guest button.active {
+  color: #176d5b;
+}
+
+.user-type-toggle.host button.active {
+  color: #a94f37;
 }
 
 .social-login {
@@ -552,11 +595,11 @@ export default {
 }
 
 .submit-btn.guest {
-  background: #10b981;
+  background: linear-gradient(120deg, #237a64, #155b4b);
 }
 
 .submit-btn.host {
-  background: #0F4C81;
+  background: linear-gradient(120deg, #c16a49, #9c4933);
 }
 
 .submit-btn:hover:not(:disabled) {

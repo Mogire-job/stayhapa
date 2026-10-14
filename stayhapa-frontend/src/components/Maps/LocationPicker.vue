@@ -1,24 +1,10 @@
 <template>
   <div class="location-picker">
-    <div class="search-container">
-      <input
-        ref="searchInput"
-        type="text"
-        v-model="searchQuery"
-        placeholder="Search for an address or place..."
-        class="location-search-input"
-        @input="onSearchInput"
-      />
-      <div v-if="searchSuggestions.length > 0" class="suggestions-dropdown">
-        <div
-          v-for="(suggestion, index) in searchSuggestions"
-          :key="index"
-          class="suggestion-item"
-          @click="selectSuggestion(suggestion)"
-        >
-          {{ suggestion.description }}
-        </div>
-      </div>
+    <div
+      ref="autocompleteContainer"
+      class="search-container"
+      aria-label="Search for a property location"
+    >
     </div>
 
     <GoogleMap
@@ -27,6 +13,7 @@
       :zoom="zoom"
       class="location-map"
       @map-loaded="onMapLoaded"
+      @map-error="onMapError"
     >
       <template #default="{ map }">
         <div v-if="map">
@@ -42,6 +29,8 @@
       </template>
     </GoogleMap>
 
+    <p v-if="mapError" class="map-error" role="status">{{ mapError }}</p>
+
     <div v-if="selectedLocation" class="selected-location">
       <h4>Selected Location:</h4>
       <p>{{ selectedLocation.address }}</p>
@@ -51,7 +40,7 @@
 </template>
 
 <script>
-import GoogleMap from './GoogleMap.vue';
+import GoogleMap from './GoogleMaps.vue';
 import GoogleMapMarker from './GoogleMapMarker.vue';
 
 export default {
@@ -69,22 +58,18 @@ export default {
   data() {
     return {
       map: null,
-      autocomplete: null,
-      searchQuery: '',
-      searchSuggestions: [],
+      autocompleteElement: null,
       selectedLocation: null,
       marker: null,
-      mapCenter: { lat: 40.7128, lng: -74.0060 }, // Default to NYC
+      mapCenter: { lat: -1.2864, lng: 36.8172 },
       zoom: 12,
-      placesService: null,
-      geocoder: null
+      geocoder: null,
+      mapError: ''
     };
   },
   mounted() {
-    this.initializeAutocomplete();
     if (this.initialLocation) {
       this.selectedLocation = this.initialLocation;
-      this.searchQuery = this.initialLocation.address;
       this.mapCenter = {
         lat: this.initialLocation.lat,
         lng: this.initialLocation.lng
@@ -92,86 +77,67 @@ export default {
     }
   },
   methods: {
-    initializeAutocomplete() {
-      if (window.google) {
-        this.setupAutocomplete();
-      } else {
-        // Wait for Google Maps to load
-        setTimeout(() => {
-          this.setupAutocomplete();
-        }, 1000);
-      }
+    onMapError(error) {
+      this.mapError = error.message || 'Map unavailable. Enter your address manually.';
     },
-    setupAutocomplete() {
-      if (!this.$refs.searchInput) return;
+    setupPlaceAutocomplete() {
+      const PlaceAutocompleteElement = google.maps.places.PlaceAutocompleteElement;
+      if (!this.$refs.autocompleteContainer || !PlaceAutocompleteElement) {
+        throw new Error('Google Places search could not be initialized. Enter the address manually below.');
+      }
 
-      this.autocomplete = new google.maps.places.Autocomplete(this.$refs.searchInput, {
-        types: ['address', 'establishment'],
-        componentRestrictions: { country: 'us' }
-      });
-
-      this.autocomplete.addListener('place_changed', this.onPlaceChanged);
+      this.autocompleteElement = new PlaceAutocompleteElement();
+      this.autocompleteElement.includedRegionCodes = ['ke'];
+      this.autocompleteElement.placeholder = 'Search for an address or place in Kenya';
+      this.autocompleteElement.addEventListener('gmp-select', this.onPlaceSelected);
+      this.$refs.autocompleteContainer.replaceChildren(this.autocompleteElement);
     },
     onMapLoaded(map) {
       this.map = map;
-      this.placesService = new google.maps.places.PlacesService(map);
       this.geocoder = new google.maps.Geocoder();
+      try {
+        this.setupPlaceAutocomplete();
+        this.mapError = '';
+      } catch (error) {
+        console.error('Could not initialize Google Places search:', error);
+        this.mapError = error.message;
+      }
       
       // Add click listener to map
       map.addListener('click', (event) => {
         this.setLocationFromLatLng(event.latLng);
       });
     },
-    onPlaceChanged() {
-      const place = this.autocomplete.getPlace();
-      if (!place.geometry) return;
-
-      this.selectPlace(place);
+    async onPlaceSelected(event) {
+      try {
+        if (!event.placePrediction) {
+          throw new Error('The selected result did not include place details.');
+        }
+        const place = event.placePrediction.toPlace();
+        await place.fetchFields({
+          fields: ['formattedAddress', 'location', 'id', 'addressComponents']
+        });
+        this.selectPlace(place);
+      } catch (error) {
+        console.error('Could not retrieve the selected place:', error);
+        this.mapError = 'Could not retrieve that place. Enter the address manually below.';
+      }
     },
     selectPlace(place) {
-      const location = {
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng(),
-        address: place.formatted_address,
-        placeId: place.place_id
-      };
-
-      this.setSelectedLocation(location);
-      this.searchSuggestions = [];
-    },
-    onSearchInput() {
-      if (this.searchQuery.length < 3) {
-        this.searchSuggestions = [];
+      if (!place.location) {
+        this.mapError = 'That place does not include a map location. Try another result or enter the address manually.';
         return;
       }
 
-      this.getPlacePredictions();
-    },
-    getPlacePredictions() {
-      if (!this.placesService) return;
-
-      const request = {
-        input: this.searchQuery,
-        types: ['address', 'establishment']
+      const location = {
+        lat: place.location.lat(),
+        lng: place.location.lng(),
+        address: place.formattedAddress || '',
+        placeId: place.id,
+        addressComponents: place.addressComponents || []
       };
 
-      this.placesService.getPlacePredictions(request, (predictions, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-          this.searchSuggestions = predictions;
-        }
-      });
-    },
-    selectSuggestion(suggestion) {
-      const request = {
-        placeId: suggestion.place_id
-      };
-
-      this.placesService.getDetails(request, (place, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-          this.selectPlace(place);
-          this.searchQuery = suggestion.description;
-        }
-      });
+      this.setSelectedLocation(location);
     },
     onMarkerDragEnd(event) {
       this.setLocationFromLatLng(event.latLng);
@@ -183,9 +149,12 @@ export default {
             lat: latLng.lat(),
             lng: latLng.lng(),
             address: results[0].formatted_address,
-            placeId: results[0].place_id
+            placeId: results[0].place_id,
+            addressComponents: results[0].address_components || []
           };
           this.setSelectedLocation(location);
+        } else {
+          this.mapError = 'Could not look up this map location. Enter the address manually below.';
         }
       });
     },
@@ -203,9 +172,24 @@ export default {
     clearLocation() {
       this.selectedLocation = null;
       this.marker = null;
-      this.searchQuery = '';
+      this.autocompleteElement?.remove();
+      if (this.autocompleteElement && this.$refs.autocompleteContainer) {
+        this.$refs.autocompleteContainer.append(this.autocompleteElement);
+      }
       this.$emit('location-cleared');
     }
+  },
+  watch: {
+    initialLocation(location) {
+      if (location) {
+        this.selectedLocation = location;
+        this.mapCenter = { lat: location.lat, lng: location.lng };
+      }
+    }
+  },
+  beforeUnmount() {
+    this.autocompleteElement?.removeEventListener('gmp-select', this.onPlaceSelected);
+    this.autocompleteElement?.remove();
   }
 };
 </script>
@@ -213,53 +197,30 @@ export default {
 <style scoped>
 .location-picker {
   width: 100%;
-  height: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .search-container {
-  position: relative;
-  margin-bottom: 1rem;
-}
-
-.location-search-input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
+  min-height: 48px;
 }
 
-.suggestions-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-  z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.suggestion-item {
-  padding: 0.75rem;
-  cursor: pointer;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.suggestion-item:hover {
-  background: #f8f9fa;
-}
-
-.suggestion-item:last-child {
-  border-bottom: none;
+.search-container :deep(gmp-place-autocomplete) {
+  width: 100%;
 }
 
 .location-map {
-  height: 300px;
-  margin-bottom: 1rem;
+  height: 300px !important;
+}
+
+.map-error {
+  margin: 0;
+  color: #6d5547;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .selected-location {
@@ -278,5 +239,7 @@ export default {
   margin: 0.25rem 0;
   color: #666;
   font-size: 0.9rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 </style>

@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // Import files from their actual locations
 import Home from './views/Home.vue'
 import Listings from './views/Listings.vue'
+import PropertyDetails from './views/PropertyDetails.vue'
 import Bookings from './views/Bookings.vue'
 import Dashboard from './views/Dashboard.vue'
 import Account from './views/Account.vue'
@@ -28,18 +29,21 @@ const ListingsManagement = () => import('./components/Host/ListingsManagement.vu
 const routes = [
   { path: '/', component: Home },
   { path: '/listings', component: Listings },
-  { path: '/bookings', component: Bookings },
-  { path: '/dashboard', component: Dashboard },
-  { path: '/account', component: Account },
+  { path: '/property/:id', component: PropertyDetails },
+  { path: '/bookings', component: Bookings, meta: { requiresAuth: true, role: 'guest' } },
+  { path: '/host/bookings', component: Bookings, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/dashboard', component: Dashboard, meta: { requiresAuth: true } },
+  { path: '/account', component: Account, meta: { requiresAuth: true } },
   { path: '/login', component: Login },
   { path: '/signup', component: SignUp },
   { path: '/get-started', component: GetStartedPage },
-  { path: '/host/dashboard', component: HostDashboard },
-  { path: '/host/add-property', component: AddProperty },
-  { path: '/host/properties', component: ListingsManagement },
-  { path: '/host/profile', component: HostProfile },
-  { path: '/guest/dashboard', component: GuestDashboard },
-  { path: '/guest/profile', component: GuestProfile },
+  { path: '/host/dashboard', component: HostDashboard, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/host/add-property', component: AddProperty, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/host/edit-property/:id', component: AddProperty, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/host/properties', component: ListingsManagement, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/host/profile', component: HostProfile, meta: { requiresAuth: true, role: 'host' } },
+  { path: '/guest/dashboard', component: GuestDashboard, meta: { requiresAuth: true, role: 'guest' } },
+  { path: '/guest/profile', component: GuestProfile, meta: { requiresAuth: true, role: 'guest' } },
   { path: '/verify-account', component: EmailVerification },
   { path: '/host-guide', component: HostGuide },
   { path: '/help', component: HelpCenter },
@@ -55,31 +59,30 @@ const router = createRouter({
 })
 
 // Add navigation guard to check authentication and verification
-router.beforeEach((to, from, next) => {
-  const currentUser = JSON.parse(localStorage.getItem('stayhapa_current_user') || 'null');
-  
-  // Routes that require authentication
-  const requiresAuth = [
-    '/dashboard', '/account', '/bookings', 
-    '/host/dashboard', '/host/add-property', '/host/properties',
-    '/guest/dashboard'
-  ];
-  
-  // Check if route requires authentication
-  if (requiresAuth.includes(to.path) && !currentUser) {
-    next('/login');
-    return;
+router.beforeEach((to) => {
+  let currentUser;
+  try {
+    currentUser = JSON.parse(localStorage.getItem('stayhapa_current_user') || 'null');
+  } catch (error) {
+    console.error('Could not read the saved account session:', error);
+    localStorage.removeItem('stayhapa_current_user');
+    localStorage.removeItem('stayhapa_token');
+    return '/login';
   }
-  
-  // Check verification status for authenticated routes (excluding verification page itself)
-  if (currentUser && to.path !== '/verify-account' && requiresAuth.includes(to.path)) {
-    if (!currentUser.isVerified) {
-      next('/verify-account');
-      return;
-    }
+
+  if (to.meta.requiresAuth && !currentUser) {
+    return { path: '/login', query: { redirect: to.fullPath } };
   }
-  
-  next();
+
+  if (to.meta.requiresAuth && currentUser && !currentUser.isVerified) {
+    return '/verify-account';
+  }
+
+  if (to.meta.role && currentUser?.userType !== to.meta.role) {
+    return currentUser?.userType === 'host' ? '/host/dashboard' : '/guest/dashboard';
+  }
+
+  return true;
 })
 
 export default router

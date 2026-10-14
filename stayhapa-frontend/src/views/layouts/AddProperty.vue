@@ -22,8 +22,8 @@
 
     <div class="add-property-container" v-if="currentUser">
       <div class="form-header">
-        <h1>List Your Property</h1>
-        <p>Share your space with travelers from around the world</p>
+        <h1>{{ isEditing ? 'Edit Your Property' : 'List Your Property' }}</h1>
+        <p>{{ isEditing ? 'Keep your listing details up to date' : 'Share your space with travelers from around the world' }}</p>
       </div>
 
       <form @submit.prevent="handleSubmit" class="property-form">
@@ -55,17 +55,21 @@
               <label>Property Type *</label>
               <select v-model="propertyData.type" required>
                 <option value="">Select type</option>
-                <option value="apartment">Apartment</option>
-                <option value="villa">Villa</option>
-                <option value="beach_house">Beach House</option>
-                <option value="cabin">Cabin</option>
-                <option value="luxury">Luxury</option>
-                <option value="unique">Unique Stay</option>
+                <option value="APARTMENT">Apartment</option>
+                <option value="HOUSE">House</option>
+                <option value="CONDO">Condo</option>
+                <option value="TOWNHOUSE">Townhouse</option>
+                <option value="CABIN">Cabin</option>
+                <option value="COTTAGE">Cottage</option>
+                <option value="VILLA">Villa</option>
+                <option value="LOFT">Loft</option>
+                <option value="STUDIO">Studio</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label>Price per Night ($) *</label>
+              <label>Price per Night (KSh) *</label>
               <input 
                 type="number" 
                 v-model.number="propertyData.price" 
@@ -83,7 +87,7 @@
           <div class="form-group">
             <label>Precise Location *</label>
             <p class="location-help">
-              Use the map below to pinpoint your property's exact location. This helps guests find your property easily.
+              Search the map to pinpoint your property, or enter the address below if the map is unavailable.
             </p>
             <LocationPicker
               ref="locationPicker"
@@ -153,6 +157,17 @@
             </div>
 
             <div class="form-group">
+              <label>Beds *</label>
+              <input
+                type="number"
+                v-model.number="propertyData.beds"
+                placeholder="1"
+                min="1"
+                required
+              >
+            </div>
+
+            <div class="form-group">
               <label>Max Guests *</label>
               <input 
                 type="number" 
@@ -204,9 +219,17 @@
         </div>
 
         <div class="form-actions">
+          <div v-if="errorMessage" class="form-error" role="alert">
+            <p>{{ errorMessage }}</p>
+            <div v-if="authenticationError" class="auth-recovery">
+              <router-link :to="loginLocation">Sign in as a host</router-link>
+              <span>·</span>
+              <router-link to="/signup?userType=host">Create a host account</router-link>
+            </div>
+          </div>
           <button type="button" @click="$router.back()" class="cancel-btn">Cancel</button>
           <button type="submit" :disabled="loading || !isFormValid" class="submit-btn">
-            {{ loading ? 'Publishing...' : 'Publish Property' }}
+            {{ loading ? 'Saving...' : isEditing ? 'Save Changes' : 'Publish Property' }}
           </button>
         </div>
       </form>
@@ -221,14 +244,18 @@
 </template>
 
 <script>
-import { Loader } from '@googlemaps/js-api-loader';
+import propertyService from '@/services/propertyService';
+import LocationPicker from '@/components/Maps/LocationPicker.vue';
 
 export default {
   name: 'AddProperty',
+  components: { LocationPicker },
   data() {
     return {
       currentUser: null,
       loading: false,
+      errorMessage: '',
+      authenticationError: false,
       amenitiesList: [
         'WiFi', 'Kitchen', 'Parking', 'Pool', 'Air Conditioning', 
         'Heating', 'Washer', 'Dryer', 'TV', 'Gym', 'Hot Tub',
@@ -243,6 +270,7 @@ export default {
         city: '',
         country: '',
         bedrooms: null,
+        beds: 1,
         bathrooms: null,
         maxGuests: null,
         amenities: [],
@@ -251,12 +279,19 @@ export default {
         latitude: null,
         longitude: null,
         placeId: null
-      },
-      mapLoader: null,
-      isMapLoaded: false
+      }
     }
   },
   computed: {
+    isEditing() {
+      return Boolean(this.$route.params.id)
+    },
+    loginLocation() {
+      return {
+        path: '/login',
+        query: { userType: 'host', redirect: this.$route.fullPath }
+      };
+    },
     isFormValid() {
       return (
         this.propertyData.title &&
@@ -267,15 +302,16 @@ export default {
         this.propertyData.city &&
         this.propertyData.country &&
         this.propertyData.bedrooms !== null &&
+        this.propertyData.beds >= 1 &&
         this.propertyData.bathrooms !== null &&
-        this.propertyData.maxGuests > 0 &&
-        this.propertyData.location
+        this.propertyData.maxGuests > 0
       )
     }
   },
   methods: {
     handleLogout() {
       localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
       this.$router.push('/');
     },
     loadUserData() {
@@ -339,42 +375,35 @@ export default {
         this.propertyData.address = location.address;
       }
       
-      // Try to extract city and country from the address
-      if (!this.propertyData.city || !this.propertyData.country) {
-        this.extractCityCountry(location.address);
+      const componentValue = (types) => {
+        const component = location.addressComponents?.find(item =>
+          types.some(type => item.types.includes(type))
+        );
+        return component?.longText || component?.long_name || '';
+      };
+
+      if (!this.propertyData.city) {
+        this.propertyData.city = componentValue(['locality', 'postal_town', 'administrative_area_level_2']);
       }
-    },
-    extractCityCountry(address) {
-      // Simple extraction - you might want to use a more sophisticated approach
-      const addressParts = address.split(',');
-      if (addressParts.length >= 2) {
-        if (!this.propertyData.city) {
-          this.propertyData.city = addressParts[addressParts.length - 2].trim();
-        }
-        if (!this.propertyData.country) {
-          this.propertyData.country = addressParts[addressParts.length - 1].trim();
-        }
+      if (!this.propertyData.country) {
+        this.propertyData.country = componentValue(['country']);
       }
     },
     validateForm() {
       const requiredFields = [
         'title', 'description', 'type', 'price', 
-        'address', 'city', 'country', 'bedrooms', 
+        'address', 'city', 'country', 'bedrooms', 'beds',
         'bathrooms', 'maxGuests'
       ];
       
       for (let field of requiredFields) {
-        if (!this.propertyData[field]) {
+        if (this.propertyData[field] === null || this.propertyData[field] === undefined || this.propertyData[field] === '') {
           return `${field.charAt(0).toUpperCase() + field.slice(1)} is required`;
         }
       }
 
-      if (!this.propertyData.location) {
-        return 'Please select a precise location on the map';
-      }
-
       if (this.propertyData.price < 1) {
-        return 'Price must be at least $1';
+        return 'Price must be at least KSh 1';
       }
 
       if (this.propertyData.maxGuests < 1) {
@@ -385,75 +414,86 @@ export default {
         return 'Bedrooms and bathrooms cannot be negative';
       }
 
+      if (this.propertyData.beds < 1) {
+        return 'Beds must be at least 1';
+      }
+
       return null;
     },
     async handleSubmit() {
+      this.errorMessage = '';
+      this.authenticationError = false;
       const validationError = this.validateForm();
       if (validationError) {
-        alert(validationError);
-        return;
-      }
-
-      if (!this.propertyData.location) {
-        alert('Please select a precise location on the map');
+        this.errorMessage = validationError;
         return;
       }
 
       this.loading = true;
 
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        const property = {
-          ...this.propertyData,
-          id: Date.now().toString(),
-          hostId: this.currentUser.id,
-          hostName: this.currentUser.fullName,
-          status: 'active',
-          rating: 0,
-          reviews: [],
-          createdAt: new Date().toISOString(),
-          // Include location data
+        const propertyPayload = {
+          title: this.propertyData.title,
+          description: this.propertyData.description,
+          address: this.propertyData.address,
+          city: this.propertyData.city,
+          country: this.propertyData.country,
           latitude: this.propertyData.latitude,
           longitude: this.propertyData.longitude,
-          placeId: this.propertyData.placeId
+          pricePerNight: this.propertyData.price,
+          bedrooms: this.propertyData.bedrooms,
+          beds: this.propertyData.beds,
+          bathrooms: this.propertyData.bathrooms,
+          maxGuests: this.propertyData.maxGuests,
+          propertyType: this.propertyData.type,
+          amenities: this.propertyData.amenities,
+          images: this.propertyData.images,
+          active: this.propertyData.active
         };
 
-        // Save to localStorage
-        const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-        properties.push(property);
-        localStorage.setItem('stayhapa_properties', JSON.stringify(properties));
+        if (this.isEditing) {
+          await propertyService.updateProperty(this.$route.params.id, propertyPayload);
+        } else {
+          await propertyService.createProperty(propertyPayload);
+        }
 
-        alert('Property listed successfully!');
-        this.$router.push('/host/dashboard');
+        await this.$router.push('/host/dashboard');
 
       } catch (error) {
         console.error('Error listing property:', error);
-        alert('Failed to list property. Please try again.');
+        if (error.status === 401) {
+          this.authenticationError = true;
+          this.errorMessage = 'Your host session is no longer valid. Sign in again; if your account was cleared when the backend restarted, create a new host account.';
+        } else if (error.status === 403) {
+          this.authenticationError = true;
+          this.errorMessage = 'This action requires a host account. Sign in with your host account or create one.';
+        } else {
+          this.errorMessage = error.message || 'Failed to list property. Please try again.';
+        }
       } finally {
         this.loading = false;
-      }
-    },
-    async initializeGoogleMaps() {
-      try {
-        this.mapLoader = new Loader({
-          apiKey: process.env.VUE_APP_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY',
-          version: 'weekly',
-          libraries: ['places']
-        });
-
-        await this.mapLoader.load();
-        this.isMapLoaded = true;
-      } catch (error) {
-        console.error('Error loading Google Maps:', error);
-        alert('Failed to load Google Maps. Please check your API key and try again.');
       }
     }
   },
   async mounted() {
     this.loadUserData();
-    await this.initializeGoogleMaps();
+    if (this.isEditing) {
+      try {
+        const property = await propertyService.getPropertyById(this.$route.params.id);
+        this.propertyData = {
+          ...this.propertyData,
+          ...property,
+          type: property.propertyType,
+          price: Number(property.pricePerNight),
+          location: property.latitude && property.longitude
+            ? { lat: property.latitude, lng: property.longitude, address: property.address }
+            : null
+        };
+      } catch (error) {
+        console.error('Error loading property:', error);
+        this.errorMessage = error.message || 'Could not load this property.';
+      }
+    }
   }
 }
 </script>
@@ -585,6 +625,7 @@ export default {
 }
 
 .form-group {
+  min-width: 0;
   margin-bottom: 1.5rem;
 }
 
@@ -616,7 +657,7 @@ export default {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -630,11 +671,17 @@ export default {
 .amenity-checkbox {
   display: flex;
   align-items: center;
+  min-width: 0;
   gap: 0.5rem;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
   transition: background-color 0.3s;
+}
+
+.amenity-checkbox span {
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .amenity-checkbox:hover {
@@ -723,9 +770,28 @@ export default {
 
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   justify-content: flex-end;
   margin-top: 2rem;
+}
+
+.form-error {
+  flex: 0 0 100%;
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.form-error p {
+  margin: 0;
+}
+
+.auth-recovery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
 .cancel-btn {
@@ -806,6 +872,12 @@ export default {
   .nav-links {
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .user-welcome {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
 }
 </style>

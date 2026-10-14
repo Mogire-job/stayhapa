@@ -54,10 +54,11 @@
         </div>
 
         <!-- User Type Toggle -->
-        <div class="user-type-toggle">
+        <div class="user-type-toggle" :class="signupData.userType" role="group" aria-label="Choose your account type">
           <button 
             type="button"
             :class="{ active: signupData.userType === 'guest' }" 
+            :aria-pressed="signupData.userType === 'guest'"
             @click="signupData.userType = 'guest'"
           >
             I'm a Guest
@@ -65,6 +66,7 @@
           <button 
             type="button"
             :class="{ active: signupData.userType === 'host' }" 
+            :aria-pressed="signupData.userType === 'host'"
             @click="signupData.userType = 'host'"
           >
             I'm a Host
@@ -136,6 +138,8 @@
             >
           </div>
 
+          <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
+
           <button type="submit" class="submit-btn" :class="signupData.userType" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
             {{ loading ? 'Creating Account...' : 'Create Account' }}
@@ -151,11 +155,14 @@
 </template>
 
 <script>
+import { apiRequest } from '../api.js'
+
 export default {
   name: 'Signup',
   data() {
     return {
       loading: false,
+      errorMessage: '',
       currentSlide: 0,
       slideInterval: null,
       signupData: {
@@ -175,45 +182,49 @@ export default {
   },
   methods: {
     async handleSignup() {
+      this.errorMessage = '';
       if (this.signupData.password !== this.signupData.confirmPassword) {
-        alert('Passwords do not match');
+        this.errorMessage = 'Passwords do not match.';
         return;
       }
 
       if (this.signupData.password.length < 6) {
-        alert('Password must be at least 6 characters long');
+        this.errorMessage = 'Password must be at least 6 characters long.';
         return;
       }
 
       this.loading = true;
 
       try {
-        const users = JSON.parse(localStorage.getItem('stayhapa_users') || '[]');
-        const existingUser = users.find(user => user.email === this.signupData.email);
-        
-        if (existingUser) {
-          alert('User with this email already exists');
-          return;
-        }
+        const nameParts = this.signupData.fullName.trim().split(/\s+/);
+        const firstName = nameParts.shift();
+        const lastName = nameParts.join(' ');
+        const role = this.signupData.userType === 'host' ? 'HOST' : 'GUEST';
+        const result = await apiRequest('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            firstName,
+            lastName,
+            email: this.signupData.email.trim().toLowerCase(),
+            password: this.signupData.password,
+            role
+          })
+        });
+        const fullName = [firstName, lastName].filter(Boolean).join(' ');
 
-        const newUser = {
-          id: Date.now().toString(),
-          fullName: this.signupData.fullName,
-          email: this.signupData.email,
-          password: this.signupData.password,
-          userType: this.signupData.userType,
-          isVerified: true,
-          createdAt: new Date().toISOString()
-        };
+        localStorage.setItem('stayhapa_token', result.token);
+        localStorage.setItem('stayhapa_current_user', JSON.stringify({
+          id: result.userId,
+          fullName: result.fullName || fullName,
+          email: result.email,
+          userType: result.role.toLowerCase(),
+          isVerified: true
+        }));
 
-        users.push(newUser);
-        localStorage.setItem('stayhapa_users', JSON.stringify(users));
-
-        alert('Account created successfully! You can now log in.');
-        this.$router.push('/login');
+        await this.$router.push(role === 'HOST' ? '/host/dashboard' : '/guest/dashboard');
       } catch (error) {
         console.error('Error during signup:', error);
-        alert('Failed to create account. Please try again.');
+        this.errorMessage = error.message || 'Could not create your account. Please try again.';
       } finally {
         this.loading = false;
       }
@@ -229,7 +240,7 @@ export default {
       this.currentSlide = (this.currentSlide + 1) % this.heroImages.length;
     }, 5000);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.slideInterval) {
       clearInterval(this.slideInterval);
     }
@@ -334,7 +345,7 @@ export default {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(15, 76, 129, 0.85) 0%, rgba(45, 55, 72, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(17, 67, 57, 0.82) 0%, rgba(30, 38, 34, 0.9) 100%);
 }
 
 .visual-content {
@@ -391,7 +402,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #fafbfc;
+  background: #f8f6f0;
   padding: 3rem 2rem;
   min-height: 100vh;
   box-sizing: border-box;
@@ -400,6 +411,30 @@ export default {
 .form-container {
   width: 100%;
   max-width: 380px;
+  animation: form-arrive 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.form-error {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem 0.9rem;
+  color: #8f3025;
+  background: #fff0eb;
+  border: 1px solid #f3c7ba;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  animation: form-arrive 220ms ease-out both;
+}
+
+@keyframes form-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-container,
+  .form-error {
+    animation: none;
+  }
 }
 
 .form-header {
@@ -409,7 +444,7 @@ export default {
 .form-header h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: #183a32;
   margin-bottom: 0.35rem;
 }
 
@@ -441,9 +476,16 @@ export default {
 
 .user-type-toggle button.active {
   background: white;
-  color: #0F4C81;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 10px rgba(26, 55, 45, 0.12);
+}
+
+.user-type-toggle.guest button.active {
+  color: #176d5b;
+}
+
+.user-type-toggle.host button.active {
+  color: #a94f37;
 }
 
 .social-login {
@@ -522,8 +564,8 @@ export default {
 
 .form-group input:focus {
   outline: none;
-  border-color: #0F4C81;
-  box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.1);
+  border-color: #32836e;
+  box-shadow: 0 0 0 3px rgba(50, 131, 110, 0.14);
 }
 
 .submit-btn {
@@ -543,11 +585,11 @@ export default {
 }
 
 .submit-btn.guest {
-  background: #10b981;
+  background: linear-gradient(120deg, #237a64, #155b4b);
 }
 
 .submit-btn.host {
-  background: #0F4C81;
+  background: linear-gradient(120deg, #c16a49, #9c4933);
 }
 
 .submit-btn:hover:not(:disabled) {

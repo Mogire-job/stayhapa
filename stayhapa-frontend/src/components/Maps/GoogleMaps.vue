@@ -3,15 +3,14 @@
     <div ref="map" class="google-map"></div>
     <div v-if="!isLoaded" class="map-loading">
       <div class="loading-spinner"></div>
-      <p>Loading map...</p>
+      <p>{{ errorMessage || 'Loading map...' }}</p>
     </div>
     <slot :map="map" :isLoaded="isLoaded"></slot>
   </div>
 </template>
 
 <script>
-import { Loader } from '@googlemaps/js-api-loader';
-import { googleMapsConfig, mapOptions } from '@/config/googleMaps';
+import { loadGoogleMaps, mapOptions } from '@/config/googleMaps';
 
 export default {
   name: 'GoogleMap',
@@ -33,7 +32,7 @@ export default {
     return {
       map: null,
       isLoaded: false,
-      loader: null
+      errorMessage: ''
     };
   },
   mounted() {
@@ -42,21 +41,10 @@ export default {
   methods: {
     async initializeMap() {
       try {
-        // Check if API key is available
-        if (!googleMapsConfig.apiKey || googleMapsConfig.apiKey === 'YOUR_GOOGLE_MAPS_API_KEY') {
-          throw new Error('Google Maps API key is missing. Please check your environment variables.');
-        }
-
-        this.loader = new Loader({
-          apiKey: googleMapsConfig.apiKey,
-          version: 'weekly',
-          libraries: googleMapsConfig.libraries
-        });
-
-        await this.loader.load();
+        const [mapsLibrary] = await loadGoogleMaps();
 
         const mapElement = this.$refs.map;
-        this.map = new google.maps.Map(mapElement, {
+        this.map = new mapsLibrary.Map(mapElement, {
           ...mapOptions,
           ...this.options,
           center: this.center,
@@ -67,6 +55,7 @@ export default {
         this.$emit('map-loaded', this.map);
       } catch (error) {
         console.error('Error loading Google Maps:', error);
+        this.errorMessage = 'Map unavailable. Check the Google Maps API key or try again.';
         this.$emit('map-error', error);
       }
     }

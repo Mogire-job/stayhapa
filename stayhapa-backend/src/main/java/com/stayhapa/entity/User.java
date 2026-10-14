@@ -94,6 +94,10 @@ public class User implements UserDetails {
         return verified;
     }
 
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
+
     public enum Role {
         ADMIN, HOST, GUEST
     }

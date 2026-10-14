@@ -34,13 +34,13 @@
               Settings
             </router-link>
             <div class="dropdown-divider"></div>
-            <button @click="switchToGuest" class="dropdown-item">
+            <button @click="createGuestAccount" class="dropdown-item">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
                 <polyline points="10 17 15 12 10 7"/>
                 <line x1="15" y1="12" x2="3" y2="12"/>
               </svg>
-              Switch to Guest
+              Create Guest Account
             </button>
             <button @click="handleLogout" class="dropdown-item logout">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -130,6 +130,7 @@
           <h2>Your Properties</h2>
           <router-link to="/host/properties" class="see-all">View All ></router-link>
         </div>
+        <p v-if="errorMessage" class="dashboard-error" role="alert">{{ errorMessage }}</p>
         
         <div v-if="hostProperties.length > 0" class="properties-grid">
           <div 
@@ -144,26 +145,26 @@
                 :alt="property.title"
               >
               <div v-else class="no-image">No Image</div>
-              <div class="property-status" :class="property.status">
-                {{ property.status === 'active' ? 'Active' : 'Inactive' }}
+              <div class="property-status" :class="{ active: property.active, inactive: !property.active }">
+                {{ property.active ? 'Active' : 'Inactive' }}
               </div>
             </div>
             
             <div class="property-details">
               <h3 class="property-title">{{ property.title }}</h3>
               <p class="property-location">{{ property.city }}, {{ property.country }}</p>
-              <p class="property-price">KSh {{ property.price }} / night</p>
+              <p class="property-price">KSh {{ Number(property.pricePerNight).toLocaleString() }} / night</p>
               
               <div class="property-meta">
                 <span>★ {{ property.rating || 'New' }}</span>
                 <span>👥 {{ property.maxGuests }} guests</span>
-                <span>🛏️ {{ property.bedrooms }} beds</span>
+                <span>🛏️ {{ property.beds ?? 0 }} beds</span>
               </div>
               
               <div class="property-actions">
                 <button @click="editProperty(property)" class="action-btn edit-btn">Edit</button>
                 <button @click="togglePropertyStatus(property)" class="action-btn status-btn">
-                  {{ property.status === 'active' ? 'Deactivate' : 'Activate' }}
+                  {{ property.active ? 'Deactivate' : 'Activate' }}
                 </button>
               </div>
             </div>
@@ -209,13 +210,19 @@
 </template>
 
 <script>
+import propertyService from '@/services/propertyService';
+import bookingService from '@/services/bookingService';
+import { toLocalDateKey } from '@/utils/date';
+
 export default {
   name: 'HostDashboard',
   data() {
     return {
       currentUser: null,
       showUserMenu: false,
+      errorMessage: '',
       hostProperties: [],
+      hostBookings: [],
       hostStats: {
         totalProperties: 0,
         activeBookings: 0,
@@ -233,8 +240,7 @@ export default {
   mounted() {
     this.loadUserData();
     this.loadHostProperties();
-    this.calculateStats();
-    this.loadRecentActivity();
+    this.loadHostBookings();
   },
   methods: {
     loadUserData() {
@@ -251,55 +257,36 @@ export default {
         this.$router.push('/login');
       }
     },
-    loadHostProperties() {
-      const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-      // Filter properties for current host
-      this.hostProperties = properties.filter(property => 
-        property.hostId === this.currentUser.id
-      );
+    async loadHostProperties() {
+      try {
+        this.hostProperties = await propertyService.getMyProperties();
+        this.calculateStats();
+      } catch (error) {
+        console.error('Error loading properties:', error);
+        this.hostProperties = [];
+        this.errorMessage = error.message || 'Could not load your properties.';
+        this.calculateStats();
+      }
+    },
+    async loadHostBookings() {
+      try {
+        this.hostBookings = await bookingService.getHostBookings();
+        this.calculateStats();
+      } catch (error) {
+        console.error('Error loading host reservations:', error);
+        this.errorMessage = error.message || 'Could not load your reservations.';
+      }
     },
     calculateStats() {
       this.hostStats.totalProperties = this.hostProperties.length;
       
-      // Calculate average rating
-      const ratedProperties = this.hostProperties.filter(p => p.rating > 0);
-      if (ratedProperties.length > 0) {
-        const totalRating = ratedProperties.reduce((sum, property) => sum + property.rating, 0);
-        this.hostStats.averageRating = (totalRating / ratedProperties.length).toFixed(1);
-      } else {
-        this.hostStats.averageRating = 0;
-      }
+      this.hostStats.averageRating = 0;
       
-      // Calculate earnings (simulated - in real app, this would come from bookings)
-      this.hostStats.totalEarnings = this.hostProperties.reduce((total, property) => {
-        return total + (property.price * 10); // Simulate 10 bookings per property
-      }, 0);
-      
-      // Simulate active bookings
-      this.hostStats.activeBookings = Math.floor(Math.random() * 10) + 1;
-    },
-    loadRecentActivity() {
-      // Simulate recent activity
-      this.recentActivity = [
-        {
-          id: 1,
-          type: 'booking',
-          message: 'New booking for Beachfront Villa',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
-        },
-        {
-          id: 2,
-          message: 'Your property Luxury Apartment got a 5-star review',
-          type: 'review',
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000) // 5 hours ago
-        },
-        {
-          id: 3,
-          type: 'property',
-          message: 'Your property City Loft was featured',
-          timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 day ago
-        }
-      ];
+      this.hostStats.totalEarnings = 0;
+      const today = toLocalDateKey();
+      this.hostStats.activeBookings = this.hostBookings.filter(booking =>
+        booking.status === 'CONFIRMED' && booking.checkOutDate >= today
+      ).length;
     },
     getActivityIcon(type) {
       const icons = {
@@ -329,46 +316,33 @@ export default {
     editProperty(property) {
       this.$router.push(`/host/edit-property/${property.id}`);
     },
-    togglePropertyStatus(property) {
-      const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-      const propertyIndex = properties.findIndex(p => p.id === property.id);
-      
-      if (propertyIndex !== -1) {
-        properties[propertyIndex].status = properties[propertyIndex].status === 'active' ? 'inactive' : 'active';
-        localStorage.setItem('stayhapa_properties', JSON.stringify(properties));
-        
-        // Reload properties
-        this.loadHostProperties();
-        
-        alert(`Property ${properties[propertyIndex].status === 'active' ? 'activated' : 'deactivated'} successfully!`);
+    async togglePropertyStatus(property) {
+      this.errorMessage = '';
+      try {
+        await propertyService.updateProperty(property.id, {
+          ...property,
+          active: !property.active
+        });
+        await this.loadHostProperties();
+      } catch (error) {
+        console.error('Error updating property status:', error);
+        this.errorMessage = error.message || 'Could not update this property.';
       }
     },
     viewBookings() {
-      alert('Bookings management coming soon!');
+      this.$router.push('/host/bookings');
     },
     viewEarnings() {
       alert('Earnings dashboard coming soon!');
     },
-    switchToGuest() {
-      // Update user's current mode to guest
-      const userData = localStorage.getItem('stayhapa_current_user');
-      if (userData) {
-        const user = JSON.parse(userData);
-        user.currentMode = 'guest';
-        localStorage.setItem('stayhapa_current_user', JSON.stringify(user));
-        
-        // Also update in users array for persistence
-        const users = JSON.parse(localStorage.getItem('stayhapa_users') || '[]');
-        const userIndex = users.findIndex(u => u.id === user.id);
-        if (userIndex !== -1) {
-          users[userIndex].currentMode = 'guest';
-          localStorage.setItem('stayhapa_users', JSON.stringify(users));
-        }
-      }
-      this.$router.push('/guest/dashboard');
+    createGuestAccount() {
+      localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
+      this.$router.push({ path: '/signup', query: { userType: 'guest' } });
     },
     handleLogout() {
       localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
       this.$router.push('/');
     }
   }
@@ -553,6 +527,14 @@ export default {
 /* Properties Section */
 .properties-section {
   margin-bottom: 3rem;
+}
+
+.dashboard-error {
+  color: #9b2c2c;
+  background: #fff1f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
 }
 
 .section-header {

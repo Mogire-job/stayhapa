@@ -25,7 +25,12 @@
       </div>
 
       <div class="properties-list">
-        <div v-if="properties.length === 0" class="empty-state">
+        <div v-if="loading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Loading properties...</p>
+        </div>
+
+        <div v-else-if="properties.length === 0" class="empty-state">
           <div class="empty-icon">🏠</div>
           <h3>No Properties Listed</h3>
           <p>You haven't listed any properties yet. Start by adding your first property!</p>
@@ -39,9 +44,9 @@
             class="property-management-card"
           >
             <div class="property-image">
-              <img :src="property.images[0]" :alt="property.title">
-              <div class="property-status" :class="property.status">
-                {{ property.status }}
+              <img :src="property.images && property.images[0] ? property.images[0] : '/placeholder.jpg'" :alt="property.title">
+              <div class="property-status" :class="{ active: property.active }">
+                {{ property.active ? 'Active' : 'Inactive' }}
               </div>
             </div>
             
@@ -51,7 +56,7 @@
               
               <div class="property-stats">
                 <div class="stat">
-                  <span class="stat-value">${{ property.price }}</span>
+                  <span class="stat-value">KES {{ Number(property.pricePerNight).toLocaleString('en-KE') }}</span>
                   <span class="stat-label">per night</span>
                 </div>
                 <div class="stat">
@@ -67,7 +72,7 @@
               <div class="property-actions">
                 <button @click="editProperty(property)" class="action-btn edit-btn">Edit</button>
                 <button @click="togglePropertyStatus(property)" class="action-btn status-btn">
-                  {{ property.status === 'active' ? 'Deactivate' : 'Activate' }}
+                  {{ property.active ? 'Deactivate' : 'Activate' }}
                 </button>
                 <button @click="deleteProperty(property.id)" class="action-btn delete-btn">Delete</button>
               </div>
@@ -80,17 +85,21 @@
 </template>
 
 <script>
+import propertyService from '@/services/propertyService';
+
 export default {
   name: 'ListingsManagement',
   data() {
     return {
       currentUser: null,
-      properties: []
+      properties: [],
+      loading: false
     }
   },
   methods: {
     handleLogout() {
       localStorage.removeItem('stayhapa_current_user');
+      localStorage.removeItem('stayhapa_token');
       this.$router.push('/');
     },
     loadUserData() {
@@ -104,34 +113,43 @@ export default {
         this.$router.push('/login');
       }
     },
-    loadProperties() {
-      const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-      this.properties = properties.filter(prop => prop.hostId === this.currentUser?.id);
-    },
-    editProperty(property) {
-      // Navigate to edit property page (you'll need to create this)
-      alert(`Edit property: ${property.title}. This would open an edit form in a real implementation.`);
-    },
-    togglePropertyStatus(property) {
-      const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-      const propertyIndex = properties.findIndex(p => p.id === property.id);
-      
-      if (propertyIndex !== -1) {
-        properties[propertyIndex].status = properties[propertyIndex].status === 'active' ? 'inactive' : 'active';
-        localStorage.setItem('stayhapa_properties', JSON.stringify(properties));
-        this.loadProperties();
-        
-        const newStatus = properties[propertyIndex].status;
-        alert(`Property ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`);
+    async loadProperties() {
+      this.loading = true;
+      try {
+        this.properties = await propertyService.getMyProperties();
+      } catch (error) {
+        console.error('Error loading properties:', error);
+        alert('Failed to load properties');
+      } finally {
+        this.loading = false;
       }
     },
-    deleteProperty(propertyId) {
-      if (confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
-        const properties = JSON.parse(localStorage.getItem('stayhapa_properties') || '[]');
-        const updatedProperties = properties.filter(prop => prop.id !== propertyId);
-        localStorage.setItem('stayhapa_properties', JSON.stringify(updatedProperties));
+    editProperty(property) {
+      this.$router.push(`/host/edit-property/${property.id}`);
+    },
+    async togglePropertyStatus(property) {
+      try {
+        await propertyService.updateProperty(property.id, {
+          ...property,
+          active: !property.active
+        });
         this.loadProperties();
-        alert('Property deleted successfully!');
+        alert(`Property ${property.active ? 'deactivated' : 'activated'} successfully!`);
+      } catch (error) {
+        console.error('Error updating property:', error);
+        alert('Failed to update property');
+      }
+    },
+    async deleteProperty(propertyId) {
+      if (confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
+        try {
+          await propertyService.deleteProperty(propertyId);
+          this.loadProperties();
+          alert('Property deleted successfully!');
+        } catch (error) {
+          console.error('Error deleting property:', error);
+          alert('Failed to delete property');
+        }
       }
     }
   },
@@ -411,6 +429,27 @@ export default {
 }
 
 @media (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+  }
+
+  .nav-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .user-welcome {
+    flex-basis: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .management-container {
     padding: 1rem;
   }
@@ -430,6 +469,8 @@ export default {
   }
   
   .property-stats {
+    flex-wrap: wrap;
+    justify-content: space-around;
     gap: 1rem;
   }
   
@@ -438,6 +479,7 @@ export default {
   }
   
   .action-btn {
+    width: 100%;
     text-align: center;
   }
 }

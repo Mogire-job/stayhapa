@@ -171,22 +171,52 @@
         <main class="listings-main">
           <!-- Map View -->
           <div v-if="viewMode === 'map'" class="map-view">
-            <div class="map-placeholder">
-              <div class="map-mock">
-                <h3>Nairobi Map View</h3>
-                <p>Interactive map would be integrated here</p>
-                <div class="map-pins">
-                  <div 
-                    v-for="listing in filteredListings" 
-                    :key="listing.id"
-                    class="map-pin"
-                    :style="{ left: `${Math.random() * 80 + 10}%`, top: `${Math.random() * 80 + 10}%` }"
-                  >
-                    <div class="pin-price">KES {{ listing.price }}</div>
-                  </div>
-                </div>
+            <GoogleMap
+              class="listings-google-map"
+              :center="mapCenter"
+              :zoom="12"
+              @map-loaded="onListingsMapLoaded"
+              @map-error="onListingsMapError"
+            >
+              <template #default="{ map, isLoaded }">
+                <GoogleMapMarker
+                  v-for="listing in isLoaded && map ? mapListings : []"
+                  :key="listing.id"
+                  :map="map"
+                  :position="{ lat: listing.mapLatitude, lng: listing.mapLongitude }"
+                  :title="listing.title"
+                  :label="`KES ${listing.price.toLocaleString('en-KE')}`"
+                  @marker-click="selectMapListing(listing)"
+                />
+              </template>
+            </GoogleMap>
+
+            <p class="map-notice" role="status">
+              Map pins show approximate locations to protect host privacy.
+              <span v-if="mapListings.length === 0">
+                No hosts have added map locations to the current listings yet.
+              </span>
+              <span v-else-if="mapListings.length < filteredListings.length">
+                Some listings do not have a saved map pin.
+              </span>
+            </p>
+
+            <p v-if="mapError" class="map-error" role="alert">{{ mapError }}</p>
+
+            <article v-if="selectedMapListing" class="map-listing-preview">
+              <img
+                v-if="selectedMapListing.image"
+                :src="selectedMapListing.image"
+                :alt="selectedMapListing.title"
+              >
+              <div>
+                <h3>{{ selectedMapListing.title }}</h3>
+                <p>{{ selectedMapListing.location }}</p>
+                <strong>KES {{ selectedMapListing.price.toLocaleString('en-KE') }} / night</strong>
+                <router-link :to="`/property/${selectedMapListing.id}`">View stay</router-link>
               </div>
-            </div>
+              <button type="button" aria-label="Close listing preview" @click="selectedMapListing = null">×</button>
+            </article>
           </div>
 
           <!-- Grid View -->
@@ -198,6 +228,11 @@
             </div>
 
             <!-- No Results State -->
+            <div v-else-if="errorMessage" class="no-results" role="alert">
+              <h3>Stays couldn't be loaded</h3>
+              <p>{{ errorMessage }}</p>
+            </div>
+
             <div v-else-if="filteredListings.length === 0" class="no-results">
               <h3>No listings found</h3>
               <p>Try adjusting your filters or search criteria</p>
@@ -215,7 +250,8 @@
                 @click="viewListing(listing.id)"
               >
                 <div class="listing-image">
-                  <img :src="listing.image" :alt="listing.title">
+                  <img v-if="listing.image" :src="listing.image" :alt="listing.title">
+                  <div v-else class="no-image">No photo yet</div>
                   <button class="favorite-btn" @click.stop="toggleFavorite(listing.id)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                       <path 
@@ -236,14 +272,15 @@
                 <div class="listing-info">
                   <div class="listing-header">
                     <h3 class="listing-title">{{ listing.title }}</h3>
-                    <div class="listing-rating">
+                    <div v-if="listing.rating" class="listing-rating">
                       <span class="stars">★</span>
                       <span class="rating-number">{{ listing.rating }}</span>
                     </div>
+                    <span v-else class="rating-number">New stay</span>
                   </div>
 
                   <p class="listing-location">{{ listing.location }}</p>
-                  <p class="listing-dates">Available dates</p>
+                  <p class="listing-dates">Published by a Stayhapa host</p>
 
                   <div class="listing-features">
                     <span class="feature">{{ listing.guests }} guests</span>
@@ -267,8 +304,8 @@
                       <span class="price">KES {{ listing.price.toLocaleString() }}</span>
                       <span class="period">night</span>
                     </div>
-                    <button class="book-now-btn" @click.stop="startBooking(listing)">
-                      Book Now
+                    <button class="book-now-btn" @click.stop="viewListing(listing.id)">
+                      View details
                     </button>
                   </div>
                 </div>
@@ -313,13 +350,25 @@
 </template>
 
 <script>
+import GoogleMap from '@/components/Maps/GoogleMaps.vue';
+import GoogleMapMarker from '@/components/Maps/GoogleMapMarker.vue';
+import propertyService from '@/services/propertyService';
+
 export default {
   name: 'ListingsPage',
+  components: {
+    GoogleMap,
+    GoogleMapMarker
+  },
   data() {
     return {
       viewMode: 'grid',
+      map: null,
+      mapError: '',
+      selectedMapListing: null,
       isFiltersCollapsed: false,
-      loading: false,
+      loading: true,
+      errorMessage: '',
       currentPage: 1,
       listingsPerPage: 12,
       currentLocation: 'Nairobi, Kenya',
@@ -589,6 +638,21 @@ export default {
     }
   },
   computed: {
+    mapListings() {
+      return this.filteredListings.filter(listing =>
+        Number.isFinite(listing.mapLatitude) && Number.isFinite(listing.mapLongitude)
+      );
+    },
+    mapCenter() {
+      if (this.mapListings.length === 0) {
+        return { lat: -1.2864, lng: 36.8172 };
+      }
+
+      return {
+        lat: this.mapListings.reduce((sum, listing) => sum + listing.mapLatitude, 0) / this.mapListings.length,
+        lng: this.mapListings.reduce((sum, listing) => sum + listing.mapLongitude, 0) / this.mapListings.length
+      };
+    },
     filteredListings() {
       let filtered = [...this.allListings];
 
@@ -658,7 +722,7 @@ export default {
   },
   mounted() {
     this.loadSearchParams();
-    this.simulateLoading();
+    this.loadListings();
   },
   methods: {
     loadSearchParams() {
@@ -670,14 +734,89 @@ export default {
         this.filters.propertyTypes = [params.category];
       }
     },
-    simulateLoading() {
+    async loadListings() {
       this.loading = true;
-      setTimeout(() => {
+      this.errorMessage = '';
+      try {
+        const properties = await propertyService.getAllProperties();
+        const activeProperties = properties.filter(property => property.active);
+        this.allListings = activeProperties.map(property => {
+          const city = property.city || '';
+          const country = property.country || '';
+          const amenities = (property.amenities || []).map(item => item.toLowerCase());
+          const propertyType = (property.propertyType || 'other').toLowerCase();
+
+          return {
+            id: property.id,
+            title: property.title,
+            location: [city, country].filter(Boolean).join(', '),
+            mapLatitude: Number.isFinite(property.mapLatitude) ? property.mapLatitude : null,
+            mapLongitude: Number.isFinite(property.mapLongitude) ? property.mapLongitude : null,
+            area: city,
+            rating: null,
+            price: Number(property.pricePerNight),
+            image: property.images?.[0] || '',
+            guests: property.maxGuests || 0,
+            bedrooms: property.bedrooms || 0,
+            beds: property.beds || 0,
+            bathrooms: property.bathrooms || 0,
+            propertyType,
+            amenities,
+            topAmenities: (property.amenities || []).slice(0, 4),
+            instantBook: false,
+            isNew: property.createdAt
+              ? Date.now() - new Date(property.createdAt).getTime() < 30 * 24 * 60 * 60 * 1000
+              : false,
+            isFavorite: false
+          };
+        });
+        this.propertyTypes = [...new Set(this.allListings.map(listing => listing.propertyType))]
+          .map(value => ({
+            value,
+            label: value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+          }));
+        this.locations = [...new Set(this.allListings.map(listing => listing.area).filter(Boolean))]
+          .map(value => ({
+            value: value.toLowerCase(),
+            label: value
+          }));
+      } catch (error) {
+        console.error('Error loading available properties:', error);
+        this.allListings = [];
+        this.errorMessage = error.message || 'Could not load available stays.';
+      } finally {
         this.loading = false;
-      }, 1000);
+      }
     },
     toggleViewMode() {
       this.viewMode = this.viewMode === 'grid' ? 'map' : 'grid';
+      this.selectedMapListing = null;
+      this.mapError = '';
+    },
+    onListingsMapLoaded(map) {
+      this.map = map;
+      this.$nextTick(this.fitListingsOnMap);
+    },
+    onListingsMapError(error) {
+      this.mapError = error.message || 'The map could not be loaded. Check the Google Maps API key and try again.';
+    },
+    fitListingsOnMap() {
+      if (!this.map || this.mapListings.length === 0 || !window.google?.maps) {
+        return;
+      }
+
+      const bounds = new google.maps.LatLngBounds();
+      this.mapListings.forEach(listing => bounds.extend({
+        lat: listing.mapLatitude,
+        lng: listing.mapLongitude
+      }));
+      this.map.fitBounds(bounds);
+      if (this.mapListings.length === 1) {
+        this.map.setZoom(13);
+      }
+    },
+    selectMapListing(listing) {
+      this.selectedMapListing = listing;
     },
     applyFilters() {
       this.currentPage = 1;
@@ -740,16 +879,18 @@ export default {
       }
     },
     viewListing(listingId) {
-      this.$router.push(`/listing/${listingId}`);
-    },
-    startBooking(listing) {
-      this.$router.push(`/booking/${listing.id}`);
+      this.$router.push(`/property/${listingId}`);
     },
     changePage(page) {
       if (page >= 1 && page <= this.totalPages) {
         this.currentPage = page;
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+    }
+  },
+  watch: {
+    mapListings() {
+      this.$nextTick(this.fitListingsOnMap);
     }
   }
 }
@@ -1093,6 +1234,7 @@ input:checked + .slider:before {
 }
 
 .map-view {
+  position: relative;
   height: 600px;
   background: white;
   border-radius: 12px;
@@ -1100,49 +1242,82 @@ input:checked + .slider:before {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.map-placeholder {
-  width: 100%;
+.listings-google-map {
   height: 100%;
-  background: #e9ecef;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.map-mock {
+.map-notice {
+  position: absolute;
+  z-index: 1;
+  top: 1rem;
+  left: 1rem;
+  max-width: min(32rem, calc(100% - 2rem));
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+  color: #334155;
+  font-size: 0.875rem;
+}
+
+.map-error {
+  position: absolute;
+  inset: 50% 1rem auto;
+  z-index: 1;
+  margin: 0 auto;
+  max-width: 32rem;
+  padding: 1rem;
+  transform: translateY(-50%);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #9f1239;
   text-align: center;
-  color: #666;
-  position: relative;
-  width: 100%;
-  height: 100%;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
 }
 
-.map-pins {
+.map-listing-preview {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-.map-pin {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  background: #0F4C81;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
+  z-index: 2;
+  right: 1rem;
+  bottom: 1rem;
+  left: 1rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  gap: 1rem;
+  max-width: 32rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
 }
 
-.pin-price {
-  transform: rotate(45deg);
-  color: white;
-  font-weight: bold;
-  font-size: 0.8rem;
+.map-listing-preview img {
+  width: 5rem;
+  height: 5rem;
+  flex: 0 0 auto;
+  border-radius: 0.65rem;
+  object-fit: cover;
+}
+
+.map-listing-preview h3,
+.map-listing-preview p {
+  margin: 0 0 0.35rem;
+}
+
+.map-listing-preview a {
+  display: inline-block;
+  margin-left: 0.75rem;
+  color: #0f4c81;
+  font-weight: 600;
+}
+
+.map-listing-preview > button {
+  align-self: flex-start;
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 .listings-grid {

@@ -23,3 +23,9 @@ Thumbs.db
 # IDE and temp files
 .vscode/
 *.log
+
+target/
+
+.classpath
+.project
+.settings/

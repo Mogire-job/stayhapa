@@ -2,5 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
 /* small helpers */
 .container { @apply max-w-6xl mx-auto px-4; }

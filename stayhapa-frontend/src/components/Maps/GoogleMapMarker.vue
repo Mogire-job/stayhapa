@@ -21,6 +21,10 @@ export default {
     title: {
       type: String,
       default: ''
+    },
+    label: {
+      type: String,
+      default: ''
     }
   },
   data() {
@@ -38,6 +42,9 @@ export default {
         map: this.map,
         draggable: this.draggable,
         title: this.title,
+        label: this.label
+          ? { text: this.label, color: '#fff', fontSize: '11px', fontWeight: '700' }
+          : undefined,
         animation: google.maps.Animation.DROP
       });
 
@@ -66,6 +73,12 @@ export default {
   beforeDestroy() {
     if (this.marker) {
       this.marker.setMap(null);
+    }
+  },
+  beforeUnmount() {
+    if (this.marker) {
+      this.marker.setMap(null);
+      this.marker = null;
     }
   }
 };
